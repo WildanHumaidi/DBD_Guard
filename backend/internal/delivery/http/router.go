@@ -74,6 +74,7 @@ func SetupRoutes(
 	dinkes.Patch("/klb/config", ewsKlbHandler.UpdateConfig)
 	dinkes.Get("/klb/alerts", ewsKlbHandler.GetActiveAlerts)
 	dinkes.Get("/analytics/sla", analyticsHandler.GetSLAMetrics)
+	dinkes.Get("/audit-logs", auditHandler.GetRecentLogs)
 	
 	// Reports (Puskesmas can manually verify/reject a report from their dashboard before PE)
 	protected.Get("/reports", reportHandler.GetReports)

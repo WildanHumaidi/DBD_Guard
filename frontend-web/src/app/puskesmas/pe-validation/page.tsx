@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, Loader2, MapPin, Calendar, Activity, X, PackageX, Clock } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, Calendar, Activity, X, PackageX, Clock, HelpCircle, Info } from "lucide-react";
 
 export default function PuskesmasPEValidationPage() {
   const [reports, setReports] = useState<any[]>([]);
@@ -167,9 +167,24 @@ export default function PuskesmasPEValidationPage() {
 
   return (
     <div className="space-y-6">
+      {/* Simulation Banner */}
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-900 dark:text-amber-200">
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 text-xs font-black uppercase tracking-wider bg-amber-500 text-white rounded-md shadow-sm">
+            DATA SIMULASI
+          </span>
+          <p className="text-xs font-semibold">
+            Modul Sistem Pendukung Keputusan (SPK) Berbasis Aturan &bull; Penanganan Kasus DBD Kota Depok
+          </p>
+        </div>
+        <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300">
+          Rule-Based DSS v1.0
+        </span>
+      </div>
+
       <div>
-        <h2 className="text-3xl font-extrabold text-text tracking-tight mb-2">Validasi PE Kader</h2>
-        <p className="text-text-muted">Daftar laporan hasil Penyelidikan Epidemiologi (PE) dari Kader Jumantik yang menunggu validasi.</p>
+        <h2 className="text-3xl font-extrabold text-text tracking-tight mb-2">Validasi PE Kader & SPK</h2>
+        <p className="text-text-muted">Evaluasi hasil Penyelidikan Epidemiologi (PE) kader dan telaah rekomendasi otomatis berbasis bukti lapangan.</p>
       </div>
 
       {error && !selectedReport && (
@@ -417,61 +432,175 @@ export default function PuskesmasPEValidationPage() {
                   </div>
                 </div>
 
-                {formData.is_approved && (
-                  <div className="space-y-3 p-3.5 bg-bg border border-border rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-semibold text-text">Rekomendasi Sistem (DSS):</span>
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
-                        (selectedReport.pe_result?.dss_recommendation || 'FOGGING') === 'FOGGING'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {selectedReport.pe_result?.dss_recommendation || 'FOGGING'}
-                      </span>
-                    </div>
+                {formData.is_approved && (() => {
+                  const larvaeFound = Boolean(selectedReport.pe_result?.larva_found);
+                  const feverCount = Number(selectedReport.pe_result?.fever_count || 0);
+                  const insektisida = inventoryItems.find((item: any) => item.item_type === "INSEKTISIDA");
+                  const currentStock = insektisida ? Number(insektisida.quantity) : 0;
+                  
+                  const isHighRisk = larvaeFound || feverCount >= 3;
+                  const hasSufficientStock = currentStock >= 10;
 
-                    <div className="pt-2 border-t border-border">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="checkbox"
-                          checked={formData.is_override}
-                          onChange={(e) => setFormData({...formData, is_override: e.target.checked})}
-                          className="rounded text-primary focus:ring-primary"
-                        />
-                        <span className="text-xs font-bold text-text">Override Rekomendasi Sistem (Advisory Override)</span>
-                      </label>
+                  // Active Rule Logic
+                  let activeRuleNumber = 3;
+                  let activeRecommendation = "EDUKASI_PSN";
+                  let ruleExplanation = "";
 
-                      {formData.is_override && (
-                        <div className="mt-3 space-y-3 p-3 bg-surface border border-amber-200 rounded-lg">
-                          <div>
-                            <label className="block text-xs font-semibold text-text mb-1">Keputusan Override Manual *</label>
-                            <select
-                              value={formData.override_decision}
-                              onChange={(e) => setFormData({...formData, override_decision: e.target.value})}
-                              className="w-full px-3 py-1.5 text-xs border border-border rounded-lg bg-bg focus:ring-2 focus:ring-primary outline-none"
-                            >
-                              <option value="FOGGING_FOKUS">FOGGING FOKUS (Prioritaskan Fogging)</option>
-                              <option value="FOGGING_TERTUNDA">FOGGING TERTUNDA (Stok Kurang)</option>
-                              <option value="EDUKASI_PSN">EDUKASI PSN (Hanya Gerakan PSN)</option>
-                            </select>
+                  if (isHighRisk && hasSufficientStock) {
+                    activeRuleNumber = 1;
+                    activeRecommendation = "FOGGING_FOKUS";
+                    ruleExplanation = `Terdeteksi indikator risiko tinggi (Jentik: ${larvaeFound ? "Positif" : "Negatif"}, Demam: ${feverCount} orang [ambang batas \u2265 3]) dan ketersediaan stok insektisida memadai (${currentStock} L \u2265 10 L). Sistem merekomendasikan Fogging Fokus segera.`;
+                  } else if (isHighRisk && !hasSufficientStock) {
+                    activeRuleNumber = 2;
+                    activeRecommendation = "FOGGING_TERTUNDA";
+                    ruleExplanation = `Kriteria fogging terpenuhi (faktor risiko tinggi), namun stok insektisida di gudang puskesmas kurang dari ambang batas minimum (${currentStock} L < 10 L). Sistem merekomendasikan penundaan fogging dan pembuatan auto-draft permintaan stok darurat ke Dinas Kesehatan.`;
+                  } else {
+                    activeRuleNumber = 3;
+                    activeRecommendation = "EDUKASI_PSN";
+                    ruleExplanation = `Tidak ditemukan jentik dan jumlah demam (${feverCount} orang) di bawah ambang batas (3 orang). Berdasarkan pedoman Kemenkes RI, fogging tidak diperbolehkan tanpa indikasi kuat guna menghindari resistensi nyamuk. Rekomendasi: Edukasi 3M Plus dan Pemberantasan Sarang Nyamuk (PSN).`;
+                  }
+
+                  return (
+                    <div className="space-y-4 p-4 bg-bg border border-border rounded-xl">
+                      {/* SPK Header */}
+                      <div className="flex items-center justify-between pb-3 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
+                            <Activity className="w-4 h-4" />
                           </div>
-
                           <div>
-                            <label className="block text-xs font-semibold text-text mb-1">Alasan Override (Wajib) *</label>
-                            <textarea
-                              rows={2}
-                              value={formData.override_reason}
-                              onChange={(e) => setFormData({...formData, override_reason: e.target.value})}
-                              placeholder="Dasar pertimbangan klinis/lapangan untuk mengesampingkan rekomendasi DSS..."
-                              className="w-full px-3 py-1.5 text-xs border border-border rounded-lg bg-bg focus:ring-2 focus:ring-primary outline-none resize-none"
-                              required={formData.is_override}
-                            ></textarea>
+                            <span className="text-xs font-bold text-text block">Rekomendasi SPK Berbasis Aturan (Rule-Based DSS)</span>
+                            <span className="text-[10px] text-text-muted">Standar Operasional Penanganan DBD Kota Depok</span>
                           </div>
                         </div>
-                      )}
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-black tracking-wide ${
+                          activeRecommendation === 'FOGGING_FOKUS'
+                            ? 'bg-red-100 text-red-800 border border-red-200'
+                            : activeRecommendation === 'FOGGING_TERTUNDA'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        }`}>
+                          {activeRecommendation === 'FOGGING_FOKUS' ? '🔴 FOGGING FOKUS' :
+                           activeRecommendation === 'FOGGING_TERTUNDA' ? '🟡 FOGGING TERTUNDA' :
+                           '🟢 EDUKASI & PSN'}
+                        </span>
+                      </div>
+
+                      {/* Transparansi: Panel Mengapa Rekomendasi Ini? */}
+                      <div className="bg-surface rounded-xl border border-indigo-100 dark:border-indigo-900/40 p-3.5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                            <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+                            Mengapa rekomendasi ini?
+                          </span>
+                          <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded">
+                            Aturan #{activeRuleNumber} Terpicu
+                          </span>
+                        </div>
+
+                        {/* Input Variables Evaluation */}
+                        <div className="grid grid-cols-3 gap-2 text-[11px]">
+                          {/* Var 1: Jentik */}
+                          <div className={`p-2 rounded-lg border ${
+                            larvaeFound ? 'bg-red-50/50 border-red-200 text-red-900' : 'bg-bg border-border text-text'
+                          }`}>
+                            <span className="text-[10px] text-text-muted block">1. Jentik (100m)</span>
+                            <span className={`font-bold block mt-0.5 ${larvaeFound ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {larvaeFound ? 'Positif (Ya)' : 'Negatif'}
+                            </span>
+                          </div>
+
+                          {/* Var 2: Demam */}
+                          <div className={`p-2 rounded-lg border ${
+                            feverCount >= 3 ? 'bg-red-50/50 border-red-200 text-red-900' : 'bg-bg border-border text-text'
+                          }`}>
+                            <span className="text-[10px] text-text-muted block">2. Demam Sekitar</span>
+                            <span className={`font-bold block mt-0.5 ${feverCount >= 3 ? 'text-red-600' : 'text-text'}`}>
+                              {feverCount} Orang {feverCount >= 3 ? '(\u2265 3)' : '(< 3)'}
+                            </span>
+                          </div>
+
+                          {/* Var 3: Stok */}
+                          <div className={`p-2 rounded-lg border ${
+                            !hasSufficientStock && isHighRisk ? 'bg-amber-50/50 border-amber-200 text-amber-900' : 'bg-bg border-border text-text'
+                          }`}>
+                            <span className="text-[10px] text-text-muted block">3. Stok Insektisida</span>
+                            <span className={`font-bold block mt-0.5 ${hasSufficientStock ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {currentStock} L {hasSufficientStock ? '(\u2265 10L)' : '(< 10L)'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Active Rule Explanation Box */}
+                        <div className="p-2.5 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-lg border border-indigo-200/60 dark:border-indigo-900/60 text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
+                          <p className="font-semibold text-[11px] mb-1 text-indigo-800 dark:text-indigo-300">
+                            Logika Keputusan Terpicu:
+                          </p>
+                          <p className="text-[11px]">{ruleExplanation}</p>
+                        </div>
+
+                        {/* Matriks Aturan Standar */}
+                        <div className="pt-2 border-t border-border text-[10px] text-text-muted space-y-1">
+                          <div className="font-semibold text-text">Pedoman Matriks Keputusan:</div>
+                          <div className={`p-1.5 rounded flex items-center justify-between ${activeRuleNumber === 1 ? 'bg-red-50 text-red-900 font-bold border border-red-200' : ''}`}>
+                            <span>Aturan 1: (Jentik = Ya ATAU Demam &ge; 3) &amp; Stok &ge; 10L &rarr; Fogging Fokus</span>
+                            {activeRuleNumber === 1 && <span className="text-red-600 text-[9px] uppercase tracking-wider font-extrabold">&bull; AKTIF</span>}
+                          </div>
+                          <div className={`p-1.5 rounded flex items-center justify-between ${activeRuleNumber === 2 ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : ''}`}>
+                            <span>Aturan 2: (Jentik = Ya ATAU Demam &ge; 3) &amp; Stok &lt; 10L &rarr; Fogging Tertunda</span>
+                            {activeRuleNumber === 2 && <span className="text-amber-600 text-[9px] uppercase tracking-wider font-extrabold">&bull; AKTIF</span>}
+                          </div>
+                          <div className={`p-1.5 rounded flex items-center justify-between ${activeRuleNumber === 3 ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : ''}`}>
+                            <span>Aturan 3: Jentik = Tidak &amp; Demam &lt; 3 &rarr; Edukasi &amp; PSN 3M</span>
+                            {activeRuleNumber === 3 && <span className="text-emerald-600 text-[9px] uppercase tracking-wider font-extrabold">&bull; AKTIF</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Override Section */}
+                      <div className="pt-2 border-t border-border">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={formData.is_override}
+                            onChange={(e) => setFormData({...formData, is_override: e.target.checked})}
+                            className="rounded text-primary focus:ring-primary"
+                          />
+                          <span className="text-xs font-bold text-text">Override Rekomendasi Sistem (Advisory Override)</span>
+                        </label>
+
+                        {formData.is_override && (
+                          <div className="mt-3 space-y-3 p-3 bg-surface border border-amber-200 rounded-lg">
+                            <div>
+                              <label className="block text-xs font-semibold text-text mb-1">Keputusan Override Manual *</label>
+                              <select
+                                value={formData.override_decision}
+                                onChange={(e) => setFormData({...formData, override_decision: e.target.value})}
+                                className="w-full px-3 py-1.5 text-xs border border-border rounded-lg bg-bg focus:ring-2 focus:ring-primary outline-none"
+                              >
+                                <option value="FOGGING_FOKUS">FOGGING FOKUS (Prioritaskan Fogging)</option>
+                                <option value="FOGGING_TERTUNDA">FOGGING TERTUNDA (Stok Kurang)</option>
+                                <option value="EDUKASI_PSN">EDUKASI PSN (Hanya Gerakan PSN)</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-semibold text-text mb-1">Alasan Override (Wajib) *</label>
+                              <textarea
+                                rows={2}
+                                value={formData.override_reason}
+                                onChange={(e) => setFormData({...formData, override_reason: e.target.value})}
+                                placeholder="Dasar pertimbangan klinis/lapangan untuk mengesampingkan rekomendasi DSS..."
+                                className="w-full px-3 py-1.5 text-xs border border-border rounded-lg bg-bg focus:ring-2 focus:ring-primary outline-none resize-none"
+                                required={formData.is_override}
+                              ></textarea>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div>
                   <label className="block text-sm font-medium text-text mb-1">Catatan Tambahan (Opsional)</label>

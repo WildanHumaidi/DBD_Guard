@@ -119,8 +119,8 @@ export default function GisMapView({ geoData, loading }: GisMapViewProps) {
       style={{ minHeight: "500px" }}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'}
+        url={process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
       />
       {geoData && geoData.features && geoData.features.length > 0 && (
         <GeoJSON

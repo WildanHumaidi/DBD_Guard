@@ -68,15 +68,19 @@ export default function MapComponent() {
     }
   };
 
+const TILE_URL = process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_ATTR = process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors';
+const DEPOK_CENTER: [number, number] = [-6.402484, 106.794243];
+
   return (
     <MapContainer 
-      center={[-6.200000, 106.816666]} // Jakarta
-      zoom={11} 
+      center={DEPOK_CENTER}
+      zoom={12} 
       className="w-full h-full rounded-xl z-0"
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={TILE_ATTR}
+        url={TILE_URL}
       />
       {geoData && (
         <GeoJSON 
