@@ -59,14 +59,18 @@ func main() {
 	notifUsecase := usecase.NewNotificationUsecase(notifService, userRepo)
 
 	// Initialize Storage
-	storageService, err := storage.NewMinioStorage(
+	var storageService storage.StorageService
+	minioStorage, err := storage.NewMinioStorage(
 		os.Getenv("MINIO_ENDPOINT"),
 		os.Getenv("MINIO_ACCESS_KEY"),
 		os.Getenv("MINIO_SECRET_KEY"),
 		os.Getenv("MINIO_USE_SSL") == "true",
 	)
 	if err != nil {
-		log.Printf("Failed to initialize MinIO storage, fallback to empty: %v", err)
+		log.Printf("Failed to initialize MinIO storage, fallback to mock: %v", err)
+		storageService = &storage.MockStorageService{}
+	} else {
+		storageService = minioStorage
 	}
 
 	authUsecase := usecase.NewAuthUsecase(userRepo)

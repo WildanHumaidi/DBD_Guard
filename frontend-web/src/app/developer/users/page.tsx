@@ -274,8 +274,8 @@ export default function UserManagementPage() {
       {/* Add Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-border">
+          <div className="bg-surface rounded-2xl border border-border shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-border bg-bg/50">
               <h3 className="text-lg font-bold text-text">
                 {isEditMode ? "Edit Akun" : "Tambah Akun"} {activeTab === "dinkes" ? "Dinas Kesehatan" : "Puskesmas"}
               </h3>
@@ -287,7 +287,7 @@ export default function UserManagementPage() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form id="user-account-form" onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-medium text-text mb-1">Nama Lengkap</label>
                 <input 
@@ -379,24 +379,25 @@ export default function UserManagementPage() {
                   </div>
                 </>
               )}
-
-              <div className="pt-4 flex justify-end gap-3 border-t border-border mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-text-muted hover:text-text font-medium"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="px-6 py-2 bg-primary hover:bg-primary-deep text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-70 flex items-center gap-2"
-                >
-                  {isSubmitting ? "Menyimpan..." : "Simpan Akun"}
-                </button>
-              </div>
             </form>
+
+            <div className="p-4 border-t border-border bg-bg/50 flex justify-end gap-3 mt-auto">
+              <button 
+                type="button" 
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-text-muted hover:text-text font-medium"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit" 
+                form="user-account-form"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-primary hover:bg-primary-deep text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-70 flex items-center gap-2"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Akun"}
+              </button>
+            </div>
           </div>
         </div>
       )}

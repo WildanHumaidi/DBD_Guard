@@ -19,8 +19,24 @@ func main() {
 	fmt.Println("   Label: DATA SIMULASI (100% Fiktif untuk PKL Diskominfo)")
 	fmt.Println("================================================================")
 
-	// 1. Load Configuration & Connect DB
+	// 1. Load Configuration & Safety Checks
 	config.LoadConfig()
+
+	// Pengaman Lingkungan Seeder: Hanya boleh dijalankan di environment 'development' dan host localhost
+	if config.Env.AppEnv != "development" {
+		log.Fatalf("PENGAMAN SEEDER DITOLAK: Seeder hanya diizinkan berjalan pada APP_ENV='development' (terdeteksi: APP_ENV='%s')", config.Env.AppEnv)
+	}
+
+	allowedHosts := map[string]bool{
+		"localhost": true,
+		"127.0.0.1": true,
+		"::1":       true,
+		"":          true,
+	}
+	if !allowedHosts[config.Env.DBHost] {
+		log.Fatalf("PENGAMAN SEEDER DITOLAK: Seeder hanya diizinkan berjalan pada host database lokal ('localhost' atau '127.0.0.1', terdeteksi DB_HOST='%s')", config.Env.DBHost)
+	}
+
 	config.ConnectDB()
 	db := config.DB
 	if db == nil {
@@ -386,6 +402,67 @@ func main() {
 		UpdatedAt:       time.Now().Add(-2 * time.Hour),
 	}
 	db.Create(&schedDemo)
+
+	// Skenario Jadwal Aktif Tim Fogging: DBD-DPK-2026-FOG01 (Siap Didemokan OTW -> Selesai)
+	reportFogReady := domain.CitizenReport{
+		ReferenceNo:    "DBD-DPK-2026-FOG01",
+		Category:       "Kasus Demam Berdarah",
+		Description:    "SIMULASI - Kasus demam berdarah klaster RT 03 Beji telah divalidasi SPK dan dijadwalkan untuk fogging fokus.",
+		Status:         "FOGGING_SCHEDULED",
+		ReporterID:     reporterDemo.ID,
+		InvestigatorID: &petugasPE.ID,
+		CreatedAt:      time.Now().Add(-24 * time.Hour),
+		UpdatedAt:      time.Now().Add(-1 * time.Hour),
+	}
+	db.Create(&reportFogReady)
+
+	locFogReady := domain.ReportLocation{
+		ReportID:  reportFogReady.ID,
+		Latitude:  -6.374200,
+		Longitude: 106.829000,
+		Address:   "SIMULASI - Jl. KH. M. Usman No. 12, RT 03 / RW 04",
+		RT:        "03",
+		RW:        "04",
+		Kelurahan: "Beji",
+		Kecamatan: "Beji",
+	}
+	db.Omit("Geom").Create(&locFogReady)
+
+	peFogReady := domain.PEResult{
+		ReportID:         reportFogReady.ID,
+		OfficerID:        petugasPE.ID,
+		ValidatorID:      &kepalaPusk.ID,
+		Status:           "VALIDATED",
+		InspectionDate:   time.Now().Add(-12 * time.Hour),
+		RadiusMeters:     100,
+		LarvaeFound:      true,
+		FeverCount:       4,
+		Recommendation:   "FOGGING_FOKUS",
+		PsnEdukasiDone:   true,
+		Notes:            "SIMULASI - Validasi SPK Aturan #1 terpicu: Jentik positif dan demam 4 orang.",
+		EvidencePhotoURL: "https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?auto=format&fit=crop&w=600&q=80",
+		CreatedAt:        time.Now().Add(-12 * time.Hour),
+	}
+	db.Create(&peFogReady)
+
+	fogReqReady := domain.FoggingRequest{
+		PEID:           peFogReady.ID,
+		ApprovalStatus: "APPROVED",
+		ReservedStock:  2.0,
+		CreatedAt:      time.Now().Add(-6 * time.Hour),
+	}
+	db.Create(&fogReqReady)
+
+	schedReady := domain.FoggingSchedule{
+		RequestID:       fogReqReady.ID,
+		TeamID:          timFogging.ID,
+		PlannedTime:     time.Now().Add(2 * time.Hour),
+		ExecutionStatus: "SCHEDULED",
+		Notes:           "SIMULASI - Jadwal fogging fokus aktif untuk demonstrasi tim pelaksana lapangan.",
+		CreatedAt:       time.Now().Add(-6 * time.Hour),
+		UpdatedAt:       time.Now().Add(-1 * time.Hour),
+	}
+	db.Create(&schedReady)
 
 	// Log Audit Trail for Scenario 1
 	auditLogs := []domain.AuditLog{

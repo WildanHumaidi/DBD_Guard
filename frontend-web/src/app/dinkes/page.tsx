@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { 
   Activity, 
   AlertTriangle, 
@@ -47,6 +48,34 @@ interface InventoryItem {
   warehouse: string;
 }
 
+interface ReportLocation {
+  kecamatan?: string;
+  kelurahan?: string;
+  rt?: string;
+  rw?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+interface ReportItem {
+  id?: string;
+  report_id?: string;
+  reference_no?: string;
+  status: string;
+  created_at: string;
+  description?: string;
+  location?: ReportLocation;
+}
+
+interface KlbAlertItem {
+  id?: string;
+  area_type?: string;
+  area_name?: string;
+  cases_count?: number;
+  is_active?: boolean;
+}
+
 interface AuditLog {
   id: string;
   created_at: string;
@@ -54,7 +83,7 @@ interface AuditLog {
   entity_name: string;
   actor_id?: string;
   user_name?: string;
-  details?: any;
+  details?: Record<string, unknown> | string;
 }
 
 const DEPOK_KECAMATAN = [
@@ -72,12 +101,13 @@ const DEPOK_KECAMATAN = [
 ];
 
 export default function AdminDashboard() {
-  const [reports, setReports] = useState<any[]>([]);
-  const [klbAlerts, setKlbAlerts] = useState<any[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [klbAlerts, setKlbAlerts] = useState<KlbAlertItem[]>([]);
   const [slaMetrics, setSlaMetrics] = useState<SLAMetrics | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(0);
 
   // Filters
   const [selectedPeriod, setSelectedPeriod] = useState<string>("ALL"); // "7D", "30D", "ALL"
@@ -94,6 +124,8 @@ export default function AdminDashboard() {
           api.get('/inventory'),
           api.get('/admin/audit-logs?limit=8'),
         ]);
+
+        setCurrentTimestamp(Date.now());
 
         if (reportsRes.status === 'fulfilled' && reportsRes.value.data?.data) {
           setReports(reportsRes.value.data.data);
@@ -138,17 +170,16 @@ export default function AdminDashboard() {
       }
 
       // Filter by Period
-      if (selectedPeriod !== "ALL") {
+      if (selectedPeriod !== "ALL" && currentTimestamp > 0) {
         const createdAt = new Date(r.created_at).getTime();
-        const now = Date.now();
-        const diffDays = (now - createdAt) / (1000 * 3600 * 24);
+        const diffDays = (currentTimestamp - createdAt) / (1000 * 3600 * 24);
         if (selectedPeriod === "7D" && diffDays > 7) return false;
         if (selectedPeriod === "30D" && diffDays > 30) return false;
       }
 
       return true;
     });
-  }, [reports, selectedKecamatan, selectedPeriod]);
+  }, [reports, selectedKecamatan, selectedPeriod, currentTimestamp]);
 
   // Metric Computations
   const totalReportsCount = filteredReports.length;
@@ -481,9 +512,9 @@ export default function AdminDashboard() {
 
           <div className="pt-4 border-t border-border mt-4 text-[11px] text-text-muted flex items-center justify-between">
             <span>Ambang batas minimum fogging: <strong>10 Liter</strong></span>
-            <a href="/dinkes/inventory" className="text-primary hover:underline font-bold">
+            <Link href="/dinkes/inventory" className="text-primary hover:underline font-bold">
               Kelola Alokasi &rarr;
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -551,9 +582,9 @@ export default function AdminDashboard() {
                 Daftar laporan warga Kota Depok terbaru yang masuk ke sistem
               </p>
             </div>
-            <a href="/dinkes/reports" className="text-xs text-primary font-bold hover:underline">
+            <Link href="/dinkes/reports" className="text-xs text-primary font-bold hover:underline">
               Lihat Semua &rarr;
-            </a>
+            </Link>
           </div>
 
           <div className="space-y-3 overflow-y-auto max-h-72 pr-1 flex-1">

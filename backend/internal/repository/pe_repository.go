@@ -54,7 +54,7 @@ func (r *peRepository) CreatePEResult(ctx context.Context, tx *gorm.DB, pe *doma
 	if tx != nil {
 		execDB = tx
 	}
-	return execDB.WithContext(ctx).Create(pe).Error
+	return execDB.WithContext(ctx).Omit("Report", "Officer", "Validator", "FoggingRequest").Create(pe).Error
 }
 
 func (r *peRepository) UpdatePEResult(ctx context.Context, tx *gorm.DB, pe *domain.PEResult) error {
@@ -62,7 +62,7 @@ func (r *peRepository) UpdatePEResult(ctx context.Context, tx *gorm.DB, pe *doma
 	if tx != nil {
 		execDB = tx
 	}
-	return execDB.WithContext(ctx).Save(pe).Error
+	return execDB.WithContext(ctx).Omit("Report", "Officer", "Validator", "FoggingRequest").Save(pe).Error
 }
 
 func (r *peRepository) WithTransaction(fn func(tx *gorm.DB) error) error {

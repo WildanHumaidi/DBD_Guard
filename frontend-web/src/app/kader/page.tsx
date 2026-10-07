@@ -40,9 +40,9 @@ export default function KaderDashboard() {
 
     const fetchEwsWarnings = async () => {
       try {
-        // Ideally these come from logged in user's profile
-        const kelurahan = "Pancoran Mas";
-        const rw = "01";
+        // Logged in demo user: Kader RW 04 Kelurahan Beji
+        const kelurahan = "Beji";
+        const rw = "04";
         const response = await api.get(`/ews-warnings?kelurahan=${kelurahan}&rw=${rw}`);
         setEwsWarnings(response.data?.data || []);
       } catch (err) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, XCircle, MapPin, User, Calendar, Loader2, Thermometer, Bug, Clock, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, User, Calendar, Loader2, Thermometer, Bug, Clock, AlertTriangle, X, Trash2 } from "lucide-react";
 
 import Cookies from "js-cookie";
 
@@ -302,13 +302,22 @@ export default function KaderVerificationPage() {
       {/* PE Form Modal */}
       {showPeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary-deep/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-border">
-              <h3 className="text-xl font-bold text-text">Form Hasil PE</h3>
-              <p className="text-sm text-text-muted mt-1">Masukkan hasil pengecekan di lokasi.</p>
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-bg/50">
+              <div>
+                <h3 className="text-xl font-bold text-text">Form Hasil PE</h3>
+                <p className="text-sm text-text-muted mt-1">Masukkan hasil pengecekan di lokasi.</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowPeModal(null)}
+                className="p-2 hover:bg-border rounded-full transition-colors text-text-muted hover:text-text"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
-            <form onSubmit={handleSubmitPE} className="p-6 space-y-4">
+            <form id="kader-pe-form" onSubmit={handleSubmitPE} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-semibold text-text mb-1">Radius Pemeriksaan (Meter)</label>
                 <input 
@@ -390,29 +399,40 @@ export default function KaderVerificationPage() {
                   {isUploadingPhoto && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
                 </div>
                 {peForm.evidence_photo_url && (
-                  <div className="mt-3 rounded-xl overflow-hidden border border-border w-48 h-48 relative">
-                    <img src={peForm.evidence_photo_url.startsWith('http') ? peForm.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${peForm.evidence_photo_url}`} alt="Preview Bukti" className="object-cover w-full h-full" />
+                  <div className="mt-3 flex items-start gap-3 p-2 bg-bg border border-border rounded-xl w-fit">
+                    <div className="rounded-lg overflow-hidden border border-border w-28 h-28 relative">
+                      <img src={peForm.evidence_photo_url.startsWith('http') ? peForm.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${peForm.evidence_photo_url}`} alt="Preview Bukti" className="object-cover w-full h-full" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPeForm({...peForm, evidence_photo_url: ""})}
+                      className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Hapus Foto
+                    </button>
                   </div>
                 )}
               </div>
-
-              <div className="flex gap-3 pt-4">
-                <button 
-                  type="button"
-                  onClick={() => setShowPeModal(null)}
-                  className="flex-1 px-4 py-3 border border-border text-text-muted font-bold rounded-xl hover:bg-bg transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit"
-                  disabled={submitting === showPeModal}
-                  className="flex-1 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary-deep transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {submitting === showPeModal ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit PE"}
-                </button>
-              </div>
             </form>
+
+            <div className="p-4 border-t border-border bg-bg/50 flex gap-3 mt-auto">
+              <button 
+                type="button"
+                onClick={() => setShowPeModal(null)}
+                className="flex-1 px-4 py-3 border border-border text-text-muted font-bold rounded-xl hover:bg-bg transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit"
+                form="kader-pe-form"
+                disabled={submitting === showPeModal || isUploadingPhoto}
+                className="flex-1 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary-deep transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
+              >
+                {submitting === showPeModal ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit PE"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -420,13 +440,25 @@ export default function KaderVerificationPage() {
       {/* Return Task Modal */}
       {showReturnModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary-deep/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-border">
-              <h3 className="text-xl font-bold text-text">Kembalikan Tugas</h3>
-              <p className="text-sm text-text-muted mt-1">Tugas yang dikembalikan akan masuk kembali ke daftar antrean laporan yang bisa diklaim Kader lain.</p>
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-border flex justify-between items-center bg-bg/50">
+              <div>
+                <h3 className="text-xl font-bold text-text">Kembalikan Tugas</h3>
+                <p className="text-sm text-text-muted mt-1">Tugas yang dikembalikan akan masuk kembali ke daftar antrean laporan yang bisa diklaim Kader lain.</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowReturnModal(null);
+                  setReturnReason("");
+                }}
+                className="p-2 hover:bg-border rounded-full transition-colors text-text-muted hover:text-text"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
-            <form onSubmit={handleReturnTask} className="p-6 space-y-4">
+            <form id="return-task-form" onSubmit={handleReturnTask} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-semibold text-text mb-1">Alasan Pengembalian</label>
                 <textarea 
@@ -438,27 +470,28 @@ export default function KaderVerificationPage() {
                   placeholder="Misal: Bukan wilayah tugas saya, sedang berhalangan hadir..."
                 ></textarea>
               </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setShowReturnModal(null);
-                    setReturnReason("");
-                  }}
-                  className="flex-1 px-4 py-3 border border-border text-text-muted font-bold rounded-xl hover:bg-bg transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit"
-                  disabled={submitting === showReturnModal || !returnReason.trim()}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {submitting === showReturnModal ? <Loader2 className="w-5 h-5 animate-spin" /> : "Kembalikan"}
-                </button>
-              </div>
             </form>
+
+            <div className="p-4 border-t border-border bg-bg/50 flex gap-3 mt-auto">
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowReturnModal(null);
+                  setReturnReason("");
+                }}
+                className="flex-1 px-4 py-3 border border-border text-text-muted font-bold rounded-xl hover:bg-bg transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit"
+                form="return-task-form"
+                disabled={submitting === showReturnModal || !returnReason.trim()}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
+              >
+                {submitting === showReturnModal ? <Loader2 className="w-5 h-5 animate-spin" /> : "Kembalikan"}
+              </button>
+            </div>
           </div>
         </div>
       )}

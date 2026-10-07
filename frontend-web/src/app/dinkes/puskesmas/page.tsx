@@ -228,8 +228,8 @@ export default function PuskesmasManagementPage() {
       {/* Modal Add/Update */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-primary-deep/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-bg/50">
               <h3 className="font-bold text-lg text-text">
                 {modalMode === "ADD" ? "Tambah Akun Puskesmas" : "Edit Akun Puskesmas"}
               </h3>
@@ -241,7 +241,7 @@ export default function PuskesmasManagementPage() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form id="puskesmas-form" onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-medium text-text mb-1">Nama Puskesmas / Institusi</label>
                 <input 
@@ -306,24 +306,26 @@ export default function PuskesmasManagementPage() {
                 </div>
               )}
 
-              <div className="pt-4 flex gap-3">
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isSubmitting}
-                  className="flex-1 bg-surface border border-border text-text py-2.5 rounded-xl font-medium hover:bg-bg transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex justify-center"
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (modalMode === "ADD" ? "Buat Akun" : "Simpan Perubahan")}
-                </button>
-              </div>
             </form>
+
+            <div className="p-4 border-t border-border bg-bg/50 flex gap-3 mt-auto">
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
+                className="flex-1 bg-surface border border-border text-text py-2.5 rounded-xl font-medium hover:bg-bg transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit"
+                form="puskesmas-form"
+                disabled={isSubmitting}
+                className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex justify-center"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (modalMode === "ADD" ? "Buat Akun" : "Simpan Perubahan")}
+              </button>
+            </div>
           </div>
         </div>
       )}

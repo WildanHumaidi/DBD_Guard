@@ -5,7 +5,9 @@
 ---
 
 > [!NOTE]
-> Seluruh data yang digunakan dalam demo ini berlabel **DATA SIMULASI** (100% fiktif), tanpa menggunakan maupun meniru data riil warga guna mematuhi prinsip perlindungan privasi data pribadi (UU PDP).
+> **Pemberitahuan Lingkungan Lokal & Data Simulasi:**  
+> Seluruh akun demo dan skrip seeder ini **hanya diperuntukkan bagi lingkungan lokal (development)**. Seeder dilengkapi pengaman dan menolak dijalankan di luar `APP_ENV=development` atau host selain `localhost`.  
+> Seluruh data yang digunakan dalam demo ini berlabel **DATA SIMULASI** (100% fiktif), tanpa menggunakan maupun meniru data riil warga guna mematuhi prinsip perlindungan privasi data pribadi (UU PDP). Sistem ini merupakan **prototipe yang dapat didemokan** untuk evaluasi PKL.
 
 ---
 
@@ -35,7 +37,26 @@ Sebelum memulai presentasi di hadapan mentor, jalankan perintah satu baris berik
 
 ---
 
-## 2. Tabel Akun Demo (7 Peran RBAC)
+## 2. Checklist Sebelum Presentasi (Persiapan Demo)
+
+Lakukan verifikasi checklist berikut sebelum memulai sesi pemaparan di hadapan mentor:
+
+- [ ] **1. Reset Data Awal**: Eksekusi `.\scripts\seed_demo.ps1` agar data berada pada kondisi awal yang konsisten.
+- [ ] **2. Uji Login Tiap Peran**: Buka browser (atau tab *incognito*) dan pastikan kredensial akun Dinkes, Puskesmas, Kader, Tim Fogging, dan Warga dapat masuk.
+- [ ] **3. Cek Banner "DATA SIMULASI"**: Pastikan label *DATA SIMULASI* terlihat jelas di dashboard monitoring Dinkes dan layar validasi PE Puskesmas.
+- [ ] **4. Cek Koneksi Internet untuk Peta**: Pastikan koneksi internet aktif untuk memuat tile OpenStreetMap, atau pastikan variabel `NEXT_PUBLIC_MAP_TILE_URL` telah diarahkan ke cache tile lokal jika internet offline.
+- [ ] **5. Siapkan Tangkapan Layar Cadangan**: Buka folder tangkapan layar cadangan alur 1 s.d. 5 sebagai antisipasi jika proyektor, server, atau jaringan mendadak mengalami kendala teknis.
+- [ ] **6. Alokasi Waktu per Segmen (Total 7–10 Menit)**:
+  - Portal Warga & Tracking: **1.5 menit**
+  - Verifikasi Kader & Penolakan Lintas Wilayah: **1.5 menit**
+  - SPK Validasi PE & Panel "Mengapa rekomendasi ini?": **2.5 menit**
+  - Fogging & Pemotongan Stok Otomatis: **1.5 menit**
+  - Dashboard Monitoring Dinkes: **2.0 menit**
+  - Kesimpulan & Tanya Jawab: **1.0 menit**
+
+---
+
+## 3. Tabel Akun Demo (7 Peran RBAC)
 
 Semua akun menggunakan kata sandi (*default password*): **`password123`**  
 URL Halaman Login Petugas: [http://localhost:3000/login](http://localhost:3000/login)
@@ -52,7 +73,7 @@ URL Halaman Login Petugas: [http://localhost:3000/login](http://localhost:3000/l
 
 ---
 
-## 3. Rundown Presentasi Demo (7–10 Menit)
+## 4. Rundown Presentasi Demo (7–10 Menit)
 
 Alur presentasi dirancang runtut mengikuti siklus hidup penanganan kasus DBD:
 
@@ -81,7 +102,7 @@ Alur presentasi dirancang runtut mengikuti siklus hidup penanganan kasus DBD:
      - **Input 1: Jentik** = Positif / Ditemukan dalam radius 100m.
      - **Input 2: Penderita Demam** = 4 orang (Ambang batas $\ge 3$).
      - **Input 3: Stok Insektisida** = 23 Liter (Ambang batas $\ge 10$ Liter).
-     - **Aturan Terpicu**: Menyoroti **Aturan 1 (Fogging Fokus)** dengan penjelasan berbasis pedoman teknis operasional Kemenkes, tanpa klaim AI *blackbox*.
+     - **Aturan Terpicu**: Menyoroti **Aturan 1 (Fogging Fokus)**. *Aturan rekomendasi ditetapkan tim pengembang dan akan divalidasi oleh Dinas Kesehatan.*
   3. Tunjukkan fitur **Advisory Human Override**: Kepala Puskesmas tetap memiliki hak klinis melakukan *override* dengan kewajiban mengisi alasan resmi yang terekam pada audit trail (*Four-Eyes Principle*).
 
 ### Menit 05:30 – 07:00 | 4. Eksekusi Fogging & Pemotongan Stok Otomatis
@@ -105,15 +126,15 @@ Alur presentasi dirancang runtut mengikuti siklus hidup penanganan kasus DBD:
 ### Menit 09:00 – 10:00 | 6. Penutup & Nilai Tambah bagi Diskominfo
 * Sistem dibangun **100% Bebas Biaya Pihak Ketiga** (tanpa Google Maps API / Twilio berbayar).
 * Menggunakan OpenStreetMap dengan konfigurasi Tile Layer yang fleksibel untuk dialihkan ke server tile lokal Diskominfo.
-* Arsitektur modular yang stabil dan siap dievaluasi.
+* Sistem merupakan prototipe yang dapat didemokan secara stabil untuk evaluasi teknis.
 
 ---
 
-## 4. Rencana Cadangan (Contingency Plan)
+## 5. Rencana Cadangan (Contingency Plan)
 
 | Potensi Kendala | Kemungkinan Penyebab | Tindakan Mitigasi Cepat Saat Presentasi |
 |---|---|---|
 | **Peta OSM Lambat / Internet Offline** | Jaringan tempat presentasi tidak stabil | Seluruh backend, kalkulasi PostGIS, marker, dan antarmuka berjalan 100% offline di `localhost`. Jika tile OSM publik lambat, peta tetap merender titik kasus. Sistem juga mendukung environment variable `NEXT_PUBLIC_MAP_TILE_URL` untuk diarahkan ke tile server lokal jika tersedia. |
 | **Koneksi Database Terputus** | Docker desktop tertidur atau port konflik | Buka terminal dan jalankan `docker compose up -d` lalu periksa koneksi dengan `.\scripts\seed_demo.ps1`. |
 | **Salah Klik / Data Demo Berantakan** | Human error saat simulasi | Buka terminal, jalankan `.\scripts\seed_demo.ps1`. Dalam 3 detik, seluruh database kembali bersih dan siap demo ulang. |
-| **Pertanyaan Mentor tentang AI / Prediksi** | Mentor menanyakan model machine learning | Jelaskan secara tegas dan jujur bahwa sistem DBD Guard ini berfokus pada **Sistem Pendukung Keputusan Berbasis Aturan (Rule-Based DSS)** yang mengacu pada parameter pasti (Jentik, Demam $\ge 3$, Stok Insektisida $\ge 10$ L) sesuai pedoman surveilans Kemenkes, sehingga keputusannya dapat dipertanggungjawabkan (*explainable*) dan tidak menimbulkan risiko *hallucination*. |
+| **Pertanyaan Mentor tentang AI / Prediksi** | Mentor menanyakan model machine learning | Jelaskan secara tegas dan jujur bahwa sistem DBD Guard ini berfokus pada **Sistem Pendukung Keputusan Berbasis Aturan (Rule-Based DSS)** yang mengacu pada parameter pasti (Jentik, Demam $\ge 3$, Stok Insektisida $\ge 10$ L), sehingga keputusannya berbasis aturan dan dapat dijelaskan tanpa klaim prediksi AI. Aturan rekomendasi ditetapkan tim pengembang dan akan divalidasi oleh Dinas Kesehatan. |

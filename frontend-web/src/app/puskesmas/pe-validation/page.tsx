@@ -457,7 +457,7 @@ export default function PuskesmasPEValidationPage() {
                   } else {
                     activeRuleNumber = 3;
                     activeRecommendation = "EDUKASI_PSN";
-                    ruleExplanation = `Tidak ditemukan jentik dan jumlah demam (${feverCount} orang) di bawah ambang batas (3 orang). Berdasarkan pedoman Kemenkes RI, fogging tidak diperbolehkan tanpa indikasi kuat guna menghindari resistensi nyamuk. Rekomendasi: Edukasi 3M Plus dan Pemberantasan Sarang Nyamuk (PSN).`;
+                    ruleExplanation = `Tidak ditemukan jentik dan jumlah demam (${feverCount} orang) di bawah ambang batas (3 orang). Aturan rekomendasi ditetapkan tim pengembang dan akan divalidasi oleh Dinas Kesehatan. Tindakan yang direkomendasikan adalah Edukasi 3M Plus dan Pemberantasan Sarang Nyamuk (PSN).`;
                   }
 
                   return (
@@ -554,6 +554,9 @@ export default function PuskesmasPEValidationPage() {
                             <span>Aturan 3: Jentik = Tidak &amp; Demam &lt; 3 &rarr; Edukasi &amp; PSN 3M</span>
                             {activeRuleNumber === 3 && <span className="text-emerald-600 text-[9px] uppercase tracking-wider font-extrabold">&bull; AKTIF</span>}
                           </div>
+                          <p className="text-[10px] text-text-muted italic pt-1 border-t border-border/50">
+                            * Aturan rekomendasi ditetapkan tim pengembang dan akan divalidasi oleh Dinas Kesehatan.
+                          </p>
                         </div>
                       </div>
 

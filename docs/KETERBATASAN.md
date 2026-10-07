@@ -40,7 +40,7 @@ Dokumen ini disusun sebagai bentuk **kejujuran dan transparansi teknis** dalam l
 * **Kondisi Saat Ini**:
   Aplikasi ini dirancang dan dikembangkan sebagai proyek PKL di bawah binaan **Dinas Komunikasi dan Informatika (Diskominfo) Kota Depok** untuk menjawab permasalahan koordinasi manual penanganan DBD.
 * **Keterbatasan**:
-  Hingga saat ini, sistem berada pada status **Prototipe Siap Uji Coba (*Pilot Ready*)**, namun **belum memperoleh persetujuan regulasi formal** atau penetapan Surat Keputusan (SK) operasional dari **Dinas Kesehatan (Dinkes) Kota Depok**.
+  Hingga saat ini, sistem berada pada status **prototipe yang dapat didemokan**, namun **belum memperoleh persetujuan regulasi formal** atau penetapan Surat Keputusan (SK) operasional dari **Dinas Kesehatan (Dinkes) Kota Depok**.
 * **Dampak**:
   Aplikasi belum dapat dideploy secara resmi ke seluruh 38 Puskesmas dan ribuan kader lingkungan sebelum adanya kesepakatan koordinasi lintas Organisasi Perangkat Daerah (OPD) antara Diskominfo dan Dinas Kesehatan.
 * **Rekomendasi Lanjutan**:
@@ -66,10 +66,10 @@ Dokumen ini disusun sebagai bentuk **kejujuran dan transparansi teknis** dalam l
 * **Keterbatasan**:
   Sistem saat ini **tidak memiliki** model *Machine Learning* untuk meramalkan persebaran wabah di masa depan (*predictive outbreak modeling*) maupun analisis spasial cuaca/curah hujan ekstrem dari BMKG.
 * **Alasan Teknis**:
-  Keputusan ini diambil secara sadar agar rekomendasi tindakan klinis (*Fogging Fokus* vs *Edukasi PSN*) bersifat transparan, dapat diverifikasi langsung (*explainable*), tidak memicu halusinasi, dan patuh pada pedoman teknis surveilans Kementerian Kesehatan RI.
+  Keputusan ini diambil secara sadar agar rekomendasi tindakan (*Fogging Fokus* vs *Edukasi PSN*) berbasis aturan dan dapat dijelaskan secara transparan tanpa klaim prediksi AI. Aturan rekomendasi ditetapkan tim pengembang dan akan divalidasi oleh Dinas Kesehatan.
 
 ---
 
 ## Kesimpulan
 
-Seluruh keterbatasan di atas tidak menghambat berjalannya fitur utama aplikasi dalam simulasi maupun pengujian saat ini. Namun demikian, poin-poin tersebut menjadi rekomendasi strategis bagi pihak Diskominfo Kota Depok apabila hendak melanjutkan proyek ini menuju tahap rilis produksi dan integrasi resmi tingkat kota.
+Seluruh keterbatasan di atas tidak menghambat berjalannya fitur utama aplikasi dalam simulasi maupun pengujian saat ini. Namun demikian, poin-poin tersebut menjadi rekomendasi strategis bagi pihak Diskominfo Kota Depok apabila hendak melanjutkan proyek ini menuju tahap evaluasi lanjutan dan integrasi resmi tingkat kota.
