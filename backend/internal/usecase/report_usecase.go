@@ -198,6 +198,9 @@ func (u *reportUsecase) SubmitFeedback(ctx context.Context, refNo string, rating
 	if report.Status != "COMPLETED" {
 		return fmt.Errorf("feedback hanya dapat diberikan setelah fogging selesai (status: COMPLETED)")
 	}
+	if report.FeedbackRating > 0 {
+		return fmt.Errorf("feedback/ulasan sudah pernah diberikan untuk laporan ini")
+	}
 
 	if err := u.reportRepo.SubmitFeedback(ctx, refNo, rating, notes); err != nil {
 		return err
@@ -321,6 +324,15 @@ func (u *reportUsecase) CancelReport(ctx context.Context, refNo string) error {
 	if err != nil {
 		return err
 	}
+
+	if u.auditRepo != nil {
+		auditDetails := map[string]interface{}{
+			"reference_no": refNo,
+			"status":       "CANCELLED_BY_USER",
+		}
+		_ = u.auditRepo.LogAction(ctx, nil, uuid.Nil, "CANCEL_REPORT_BY_USER", "CitizenReport", report.ID, auditDetails)
+	}
+
 	return nil
 }
 
@@ -524,18 +536,26 @@ func (u *reportUsecase) GetProtectedPhotoPath(ctx context.Context, userRole stri
 }
 
 func (u *reportUsecase) MergeDuplicateReport(ctx context.Context, childID, primaryID, kaderID uuid.UUID, reason string) error {
+	if childID == primaryID {
+		return errors.New("laporan tidak dapat digabungkan dengan dirinya sendiri")
+	}
+
 	// Validate reports exist
 	childReport, err := u.reportRepo.GetReportByID(ctx, childID)
 	if err != nil {
 		return err
 	}
-	_, err = u.reportRepo.GetReportByID(ctx, primaryID)
+	primaryReport, err := u.reportRepo.GetReportByID(ctx, primaryID)
 	if err != nil {
 		return err
 	}
 
 	if childReport.Status != "MENUNGGU_PE_KADER" {
 		return errors.New("hanya laporan berstatus MENUNGGU_PE_KADER yang dapat di-merge")
+	}
+
+	if primaryReport.Status == "MERGED_DUPLICATE" || primaryReport.Status == "REJECTED" || primaryReport.Status == "REJECTED_HOAX" || primaryReport.Status == "CANCELLED_BY_USER" {
+		return errors.New("laporan utama tidak valid atau sudah digabungkan/ditutup")
 	}
 
 	// Do merge

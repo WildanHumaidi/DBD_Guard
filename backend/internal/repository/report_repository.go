@@ -64,10 +64,10 @@ func (r *reportRepository) GetReports(ctx context.Context, locationID *uuid.UUID
 	query := r.db.WithContext(ctx).Preload("Reporter").Preload("Location").Preload("Photos").Preload("PEResult.FoggingRequest.Schedule")
 
 	if locationID != nil {
-		// Filter reports where the report's kelurahan is mapped to the given Puskesmas (locationID)
+		// Filter reports where the report's kelurahan is mapped to the given Puskesmas or Kelurahan (locationID)
 		query = query.Joins("JOIN report_locations rl ON citizen_reports.report_id = rl.report_id").
 			Joins("JOIN master_kelurahans mk ON rl.kelurahan = mk.name").
-			Where("mk.puskesmas_id = ?", *locationID)
+			Where("mk.puskesmas_id = ? OR mk.id = ?", *locationID, *locationID)
 	}
 
 	if err := query.Order("citizen_reports.created_at DESC").Find(&reports).Error; err != nil {

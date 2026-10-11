@@ -53,6 +53,10 @@ func (m *mockAreaCountReportRepo) CountCasesByArea(ctx context.Context, areaName
 	return 0, nil
 }
 
+func (m *mockAreaCountReportRepo) VerifyReportLocation(ctx context.Context, reportID uuid.UUID, locationID uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 func TestCheckAndTriggerKLB_KelurahanScope(t *testing.T) {
 	klbRepo := &mockKlbRepo{
 		config: &domain.KlbConfiguration{

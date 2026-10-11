@@ -114,78 +114,138 @@ func main() {
 
 	// 3. Seed Master Data (11 Kecamatan, 38 Puskesmas, 63 Kelurahan Kota Depok)
 	fmt.Println("[4/7] Memuat Master Data Wilayah Kota Depok...")
-	kecamatans := []string{
-		"Beji", "Bojongsari", "Cilodong", "Cimanggis", "Cinere", 
-		"Cipayung", "Limo", "Pancoran Mas", "Sawangan", "Sukmajaya", "Tapos",
-	}
 
 	// Create 38 Puskesmas
+	puskData := []struct {
+		name      string
+		kecamatan string
+	}{
+		{"Puskesmas Beji", "Beji"},
+		{"Puskesmas Cipayung", "Cipayung"},
+		{"Puskesmas Bojongsari", "Bojongsari"},
+		{"Puskesmas Cilodong", "Cilodong"},
+		{"Puskesmas Cimanggis", "Cimanggis"},
+		{"Puskesmas Cinere", "Cinere"},
+		{"Puskesmas Limo", "Limo"},
+		{"Puskesmas Pancoran Mas", "Pancoran Mas"},
+		{"Puskesmas Sawangan", "Sawangan"},
+		{"Puskesmas Sukmajaya", "Sukmajaya"},
+		{"Puskesmas Tapos", "Tapos"},
+		{"Puskesmas Tanah Baru", "Beji"},
+		{"Puskesmas Kemiri Muka", "Beji"},
+		{"Puskesmas Duren Seribu", "Bojongsari"},
+		{"Puskesmas Pondok Petir", "Bojongsari"},
+		{"Puskesmas Kalimulya", "Cilodong"},
+		{"Puskesmas Jatimulya", "Cilodong"},
+		{"Puskesmas Harjamukti", "Cimanggis"},
+		{"Puskesmas Pasir Gunung Selatan", "Cimanggis"},
+		{"Puskesmas Tugu", "Cimanggis"},
+		{"Puskesmas Gandul", "Cinere"},
+		{"Puskesmas Pangkalan Jati", "Cinere"},
+		{"Puskesmas Ratujaya", "Cipayung"},
+		{"Puskesmas Bojong Pondok Terong", "Cipayung"},
+		{"Puskesmas Krukut", "Limo"},
+		{"Puskesmas Meruyung", "Limo"},
+		{"Puskesmas Depok Jaya", "Pancoran Mas"},
+		{"Puskesmas Rangkapan Jaya", "Pancoran Mas"},
+		{"Puskesmas Mampang", "Pancoran Mas"},
+		{"Puskesmas Pasir Putih", "Sawangan"},
+		{"Puskesmas Pengasinan", "Sawangan"},
+		{"Puskesmas Cinangka", "Sawangan"},
+		{"Puskesmas Abadijaya", "Sukmajaya"},
+		{"Puskesmas Bakti Jaya", "Sukmajaya"},
+		{"Puskesmas Sukamaju Baru", "Tapos"},
+		{"Puskesmas Jatijajar", "Tapos"},
+		{"Puskesmas Sukatani", "Tapos"},
+		{"Puskesmas Cilangkap", "Tapos"},
+	}
+
 	var puskList []domain.MasterPuskesmas
 	puskBejiID := uuid.New()
-	puskBeji := domain.MasterPuskesmas{
-		ID:        puskBejiID,
-		Name:      "Puskesmas Beji",
-		Kecamatan: "Beji",
-	}
-	db.Create(&puskBeji)
-	puskList = append(puskList, puskBeji)
-
 	puskCipayungID := uuid.New()
-	puskCipayung := domain.MasterPuskesmas{
-		ID:        puskCipayungID,
-		Name:      "Puskesmas Cipayung",
-		Kecamatan: "Cipayung",
-	}
-	db.Create(&puskCipayung)
-	puskList = append(puskList, puskCipayung)
 
-	for i := 3; i <= 38; i++ {
-		kec := kecamatans[i%len(kecamatans)]
+	for idx, pd := range puskData {
+		var id uuid.UUID
+		if idx == 0 {
+			id = puskBejiID
+		} else if idx == 1 {
+			id = puskCipayungID
+		} else {
+			id = uuid.New()
+		}
 		p := domain.MasterPuskesmas{
-			ID:        uuid.New(),
-			Name:      fmt.Sprintf("Puskesmas %s %d", kec, i),
-			Kecamatan: kec,
+			ID:        id,
+			Name:      pd.name,
+			Kecamatan: pd.kecamatan,
 		}
 		db.Create(&p)
 		puskList = append(puskList, p)
 	}
+	puskBeji := puskList[0]
+	puskCipayung := puskList[1]
 
 	// Create 63 Kelurahan
-	kelurahanNames := []string{
-		// Beji
-		"Beji", "Beji Timur", "Kemiri Muka", "Kukusan", "Pondok Cina", "Tanah Baru",
-		// Bojongsari
-		"Bojongsari", "Bojongsari Baru", "Curug", "Duren Mekar", "Duren Seribu", "Pondok Petir", "Serua",
-		// Cilodong
-		"Cilodong", "Jatimulya", "Kalibaru", "Kalimulya", "Sukamaju",
-		// Cimanggis
-		"Cisalak Pasar", "Curug Cimanggis", "Harjamukti", "Mekarsari", "Pasir Gunung Selatan", "Tugu",
-		// Cinere
-		"Cinere", "Gandul", "Pangkalan Jati", "Pangkalan Jati Baru",
-		// Cipayung
-		"Bojong Pondok Terong", "Cipayung", "Cipayung Jaya", "Pondok Jaya", "Ratujaya",
-		// Limo
-		"Grogol", "Krukut", "Limo", "Meruyung",
-		// Pancoran Mas
-		"Depok", "Depok Jaya", "Mampang", "Pancoran Mas", "Rangkapan Jaya", "Rangkapan Jaya Baru",
-		// Sawangan
-		"Bedahan", "Cinangka", "Kedaung", "Pasir Putih", "Pengasinan", "Sawangan", "Sawangan Baru",
-		// Sukmajaya
-		"Abadijaya", "Bakti Jaya", "Cisalak", "Mekar Jaya", "Sukmajaya", "Tirtajaya",
-		// Tapos
-		"Cilangkap", "Cimpaeun", "Jatijajar", "Leuwinanggung", "Sukamaju Baru", "Sukatani", "Tapos",
+	kelurahanData := []struct {
+		name      string
+		kecamatan string
+	}{
+		// Beji (6)
+		{"Beji", "Beji"}, {"Beji Timur", "Beji"}, {"Kemiri Muka", "Beji"},
+		{"Kukusan", "Beji"}, {"Pondok Cina", "Beji"}, {"Tanah Baru", "Beji"},
+		// Bojongsari (7)
+		{"Bojongsari", "Bojongsari"}, {"Bojongsari Baru", "Bojongsari"}, {"Curug", "Bojongsari"},
+		{"Duren Mekar", "Bojongsari"}, {"Duren Seribu", "Bojongsari"}, {"Pondok Petir", "Bojongsari"}, {"Serua", "Bojongsari"},
+		// Cilodong (5)
+		{"Cilodong", "Cilodong"}, {"Jatimulya", "Cilodong"}, {"Kalibaru", "Cilodong"},
+		{"Kalimulya", "Cilodong"}, {"Sukamaju", "Cilodong"},
+		// Cimanggis (6)
+		{"Cisalak Pasar", "Cimanggis"}, {"Curug Cimanggis", "Cimanggis"}, {"Harjamukti", "Cimanggis"},
+		{"Mekarsari", "Cimanggis"}, {"Pasir Gunung Selatan", "Cimanggis"}, {"Tugu", "Cimanggis"},
+		// Cinere (4)
+		{"Cinere", "Cinere"}, {"Gandul", "Cinere"}, {"Pangkalan Jati", "Cinere"}, {"Pangkalan Jati Baru", "Cinere"},
+		// Cipayung (5)
+		{"Bojong Pondok Terong", "Cipayung"}, {"Cipayung", "Cipayung"}, {"Cipayung Jaya", "Cipayung"},
+		{"Pondok Jaya", "Cipayung"}, {"Ratujaya", "Cipayung"},
+		// Limo (4)
+		{"Grogol", "Limo"}, {"Krukut", "Limo"}, {"Limo", "Limo"}, {"Meruyung", "Limo"},
+		// Pancoran Mas (6)
+		{"Depok", "Pancoran Mas"}, {"Depok Jaya", "Pancoran Mas"}, {"Mampang", "Pancoran Mas"},
+		{"Pancoran Mas", "Pancoran Mas"}, {"Rangkapan Jaya", "Pancoran Mas"}, {"Rangkapan Jaya Baru", "Pancoran Mas"},
+		// Sawangan (7)
+		{"Bedahan", "Sawangan"}, {"Cinangka", "Sawangan"}, {"Kedaung", "Sawangan"},
+		{"Pasir Putih", "Sawangan"}, {"Pengasinan", "Sawangan"}, {"Sawangan", "Sawangan"}, {"Sawangan Baru", "Sawangan"},
+		// Sukmajaya (6)
+		{"Abadijaya", "Sukmajaya"}, {"Bakti Jaya", "Sukmajaya"}, {"Cisalak", "Sukmajaya"},
+		{"Mekar Jaya", "Sukmajaya"}, {"Sukmajaya", "Sukmajaya"}, {"Tirtajaya", "Sukmajaya"},
+		// Tapos (7)
+		{"Cilangkap", "Tapos"}, {"Cimpaeun", "Tapos"}, {"Jatijajar", "Tapos"},
+		{"Leuwinanggung", "Tapos"}, {"Sukamaju Baru", "Tapos"}, {"Sukatani", "Tapos"}, {"Tapos", "Tapos"},
 	}
 
 	var kelList []domain.MasterKelurahan
-	for idx, name := range kelurahanNames {
-		pusk := puskList[0] // Default to Beji for Beji kelurahans
-		if idx >= 6 && idx < len(puskList) {
-			pusk = puskList[idx%len(puskList)]
+	for _, kd := range kelurahanData {
+		var targetPusk domain.MasterPuskesmas
+		found := false
+		for _, p := range puskList {
+			if p.Kecamatan == kd.kecamatan && p.Name == "Puskesmas "+kd.name {
+				targetPusk = p
+				found = true
+				break
+			}
 		}
+		if !found {
+			for _, p := range puskList {
+				if p.Kecamatan == kd.kecamatan {
+					targetPusk = p
+					break
+				}
+			}
+		}
+
 		k := domain.MasterKelurahan{
-			Name:        name,
-			Kecamatan:   pusk.Kecamatan,
-			PuskesmasID: pusk.ID,
+			Name:        kd.name,
+			Kecamatan:   kd.kecamatan,
+			PuskesmasID: targetPusk.ID,
 		}
 		db.Create(&k)
 		kelList = append(kelList, k)
@@ -269,6 +329,81 @@ func main() {
 	}
 	db.Create(&wargaUser)
 
+	// 4b. Seed All 38 Puskesmas Accounts (Kepala, Petugas PE, Tim Fogging)
+	fmt.Println("   -> Mendaftarkan akun lengkap untuk 38 Puskesmas se-Kota Depok...")
+	for idx, pusk := range puskList {
+		num := idx + 1
+		puskID := pusk.ID
+
+		// Kepala Puskesmas
+		kp := domain.User{
+			Name:         fmt.Sprintf("SIMULASI - Kepala %s", pusk.Name),
+			Email:        fmt.Sprintf("kepala.pusk%d@depok.go.id", num),
+			Contact:      fmt.Sprintf("0812%08d", 10000000+num),
+			RoleID:       roleMap[domain.RoleKepalaPuskesmas],
+			LocationID:   &puskID,
+			ActiveStatus: true,
+			PasswordHash: defaultHash,
+		}
+		db.Create(&kp)
+
+		// Petugas Puskesmas (PE)
+		pp := domain.User{
+			Name:         fmt.Sprintf("SIMULASI - Petugas PE %s", pusk.Name),
+			Email:        fmt.Sprintf("petugas.pusk%d@depok.go.id", num),
+			Contact:      fmt.Sprintf("0812%08d", 20000000+num),
+			RoleID:       roleMap[domain.RolePetugasPuskesmas],
+			LocationID:   &puskID,
+			ActiveStatus: true,
+			PasswordHash: defaultHash,
+		}
+		db.Create(&pp)
+
+		// Tim Fogging
+		tf := domain.User{
+			Name:         fmt.Sprintf("SIMULASI - Tim Fogging %s", pusk.Name),
+			Email:        fmt.Sprintf("fogging.pusk%d@depok.go.id", num),
+			Contact:      fmt.Sprintf("0812%08d", 30000000+num),
+			RoleID:       roleMap[domain.RoleTimFogging],
+			LocationID:   &puskID,
+			ActiveStatus: true,
+			PasswordHash: defaultHash,
+		}
+		db.Create(&tf)
+	}
+
+	// 4c. Seed All 63 Kader Kelurahan Accounts
+	fmt.Println("   -> Mendaftarkan akun Kader untuk 63 Kelurahan se-Kota Depok...")
+	for idx, kel := range kelList {
+		num := idx + 1
+		puskID := kel.PuskesmasID
+
+		kd := domain.User{
+			Name:         fmt.Sprintf("SIMULASI - Kader RW Kelurahan %s", kel.Name),
+			Email:        fmt.Sprintf("kader.kel%d@dbdguard.id", num),
+			Contact:      fmt.Sprintf("0812%08d", 40000000+num),
+			RoleID:       roleMap[domain.RoleKader],
+			LocationID:   &puskID,
+			ActiveStatus: true,
+			PasswordHash: defaultHash,
+		}
+		db.Create(&kd)
+	}
+
+	// 4d. Seed Sample Warga Accounts (1-10)
+	fmt.Println("   -> Mendaftarkan 10 Akun Sampel Warga...")
+	for num := 1; num <= 10; num++ {
+		w := domain.User{
+			Name:         fmt.Sprintf("SIMULASI - Warga %d (Kota Depok)", num),
+			Email:        fmt.Sprintf("warga%d@gmail.com", num),
+			Contact:      fmt.Sprintf("0812%08d", 50000000+num),
+			RoleID:       roleMap[domain.RoleWarga],
+			ActiveStatus: true,
+			PasswordHash: defaultHash,
+		}
+		db.Create(&w)
+	}
+
 	// 5. Seed Inventories (Gudang Dinkes & Puskesmas)
 	fmt.Println("[6/7] Menyiapkan Inventaris Insektisida & Logistik Fogging...")
 	dinkesItems := []domain.InventoryItem{
@@ -305,6 +440,13 @@ func main() {
 		Unit:         "Unit",
 		Warehouse:    puskBeji.Name,
 	})
+	db.Create(&domain.InventoryItem{
+		ItemType:     "SOLAR",
+		Quantity:     80.0,
+		MinimumStock: 20.0,
+		Unit:         "Liter",
+		Warehouse:    puskBeji.Name,
+	})
 
 	// Puskesmas Cipayung Inventory: Insektisida 5 Liter (STOK KRITIS < 10L untuk simulasi SPK Aturan 2)
 	db.Create(&domain.InventoryItem{
@@ -314,6 +456,60 @@ func main() {
 		Unit:         "Liter",
 		Warehouse:    puskCipayung.Name,
 	})
+	db.Create(&domain.InventoryItem{
+		ItemType:     "ABATE",
+		Quantity:     40.0,
+		MinimumStock: 15.0,
+		Unit:         "Kg",
+		Warehouse:    puskCipayung.Name,
+	})
+	db.Create(&domain.InventoryItem{
+		ItemType:     "ALAT FOGGING",
+		Quantity:     4.0,
+		MinimumStock: 2.0,
+		Unit:         "Unit",
+		Warehouse:    puskCipayung.Name,
+	})
+	db.Create(&domain.InventoryItem{
+		ItemType:     "SOLAR",
+		Quantity:     45.0,
+		MinimumStock: 15.0,
+		Unit:         "Liter",
+		Warehouse:    puskCipayung.Name,
+	})
+
+	// Seed Standard Inventory for the other 36 Puskesmas
+	for i := 2; i < len(puskList); i++ {
+		p := puskList[i]
+		db.Create(&domain.InventoryItem{
+			ItemType:     "INSEKTISIDA",
+			Quantity:     35.0,
+			MinimumStock: 10.0,
+			Unit:         "Liter",
+			Warehouse:    p.Name,
+		})
+		db.Create(&domain.InventoryItem{
+			ItemType:     "ABATE",
+			Quantity:     50.0,
+			MinimumStock: 15.0,
+			Unit:         "Kg",
+			Warehouse:    p.Name,
+		})
+		db.Create(&domain.InventoryItem{
+			ItemType:     "ALAT FOGGING",
+			Quantity:     5.0,
+			MinimumStock: 2.0,
+			Unit:         "Unit",
+			Warehouse:    p.Name,
+		})
+		db.Create(&domain.InventoryItem{
+			ItemType:     "SOLAR",
+			Quantity:     50.0,
+			MinimumStock: 20.0,
+			Unit:         "Liter",
+			Warehouse:    p.Name,
+		})
+	}
 
 	// 6. Skenario Demo Lengkap & Wilayah Siaga EWS
 	fmt.Println("[7/7] Menyusun Skenario Alur Lengkap, Kelurahan Siaga, & Penolakan Lintas Wilayah...")

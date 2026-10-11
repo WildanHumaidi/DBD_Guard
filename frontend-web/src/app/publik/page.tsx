@@ -34,7 +34,8 @@ export default function PublikPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/v1/public/stats");
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+        const response = await fetch(`${apiUrl}/public/stats`);
         const data = await response.json();
 
         if (data.status === "success") {

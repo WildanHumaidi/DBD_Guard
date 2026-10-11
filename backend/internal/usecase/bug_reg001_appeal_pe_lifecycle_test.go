@@ -55,6 +55,10 @@ func (m *mockFullLifecycleReportRepo) SubmitAppealAtomic(ctx context.Context, id
 	return nil
 }
 
+func (m *mockFullLifecycleReportRepo) VerifyReportLocation(ctx context.Context, reportID uuid.UUID, locationID uuid.UUID) (bool, error) {
+	return true, nil
+}
+
 type mockVerificationRepo struct {
 	repository.VerificationRepository
 	verifications []*domain.Verification

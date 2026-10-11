@@ -146,6 +146,10 @@ func (u *foggingScheduleUsecase) UpdateExecutionStatus(ctx context.Context, sche
 		return errors.New("jadwal fogging yang sudah selesai atau gagal tidak dapat diupdate lagi")
 	}
 
+	if schedule.TeamID != actorID {
+		return errors.New("akses ditolak: jadwal fogging ini bukan ditugaskan kepada tim Anda")
+	}
+
 	if status == "COMPLETED" && len(usedItems) == 0 {
 		return errors.New("penggunaan inventory wajib diisi saat menyelesaikan jadwal fogging")
 	}
@@ -242,13 +246,21 @@ func (u *foggingScheduleUsecase) UpdateExecutionStatus(ctx context.Context, sche
 }
 
 func (u *foggingScheduleUsecase) UploadEvidence(ctx context.Context, scheduleID, uploaderID uuid.UUID, storageKey string) error {
+	schedule, err := u.scheduleRepo.GetScheduleByID(ctx, scheduleID)
+	if err != nil {
+		return err
+	}
+	if schedule.TeamID != uploaderID {
+		return errors.New("akses ditolak: bukti fogging hanya dapat diunggah oleh tim yang ditugaskan")
+	}
+
 	evidence := &domain.FoggingEvidence{
 		ScheduleID: scheduleID,
 		StorageKey: storageKey,
 		UploadedBy: uploaderID,
 	}
 
-	err := u.scheduleRepo.SaveEvidence(ctx, evidence)
+	err = u.scheduleRepo.SaveEvidence(ctx, evidence)
 	if err != nil {
 		return err
 	}

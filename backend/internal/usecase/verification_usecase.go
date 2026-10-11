@@ -49,7 +49,6 @@ func (u *verificationUsecase) VerifyReport(ctx context.Context, reportID, actorI
 		if report.Status != "APPEALED" {
 			return errors.New("Puskesmas hanya dapat memverifikasi laporan dengan status APPEALED")
 		}
-		// Optional: Location scope check for Puskesmas
 		if locationID == nil {
 			return errors.New("Puskesmas tidak memiliki area tugas yang valid")
 		}
@@ -62,6 +61,19 @@ func (u *verificationUsecase) VerifyReport(ctx context.Context, reportID, actorI
 		}
 	} else {
 		return errors.New("role anda tidak memiliki izin untuk memverifikasi laporan ini")
+	}
+
+	// 1.6 Territorial Jurisdiction Validation
+	if locationID != nil {
+		allowed, err := u.reportRepo.VerifyReportLocation(ctx, reportID, *locationID)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return domain.ErrUnauthorizedJurisdiction
+		}
+	} else if actorRole != domain.RoleAdminDeveloper && actorRole != domain.RoleDinkes {
+		return domain.ErrMissingLocationContext
 	}
 
 	// 2. Perform Transaction

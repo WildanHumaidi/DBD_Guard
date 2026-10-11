@@ -71,12 +71,16 @@ func main() {
 	var roleTim domain.Role
 	config.DB.Where("role_name = ?", domain.RoleTimFogging).First(&roleTim)
 
+	var puskBeji domain.MasterPuskesmas
+	config.DB.Where("name ILIKE ?", "%Beji%").First(&puskBeji)
+
 	// Create Temporary Users
 	kader := domain.User{
 		Name:         "Test Kader E2E",
 		Email:        "kader.e2e@test.com",
 		PasswordHash: "mockhash",
 		RoleID:       roleKader.ID,
+		LocationID:   &puskBeji.ID,
 	}
 	config.DB.Where("email = ?", kader.Email).FirstOrCreate(&kader)
 	defer config.DB.Unscoped().Delete(&kader)
@@ -86,6 +90,7 @@ func main() {
 		Email:        "puskesmas.e2e@test.com",
 		PasswordHash: "mockhash",
 		RoleID:       rolePuskesmas.ID,
+		LocationID:   &puskBeji.ID,
 	}
 	config.DB.Where("email = ?", puskesmas.Email).FirstOrCreate(&puskesmas)
 	defer config.DB.Unscoped().Delete(&puskesmas)

@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, Send, UploadCloud, CheckCircle, MapPin } from 'lucide-react';
 import api from '@/lib/api';
+
+const ReportLocationMap = dynamic(
+  () => import('@/components/ReportLocationMap'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[280px] sm:h-[320px] rounded-2xl bg-surface/50 border border-border flex flex-col items-center justify-center gap-2">
+        <div className="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <span className="text-xs text-text-muted">Memuat peta...</span>
+      </div>
+    ),
+  }
+);
 
 // Dummy data for Depok for MVP
 const DEPOK_DATA: Record<string, string[]> = {
@@ -53,7 +67,9 @@ export default function ReportPage() {
     kelurahan: '',
   });
 
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [location, setLocation] = useState<{lat: number, lng: number}>({ lat: -6.4025, lng: 106.7942 });
+  const [isGps, setIsGps] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -65,27 +81,40 @@ export default function ReportPage() {
     }
   };
 
-  useEffect(() => {
-    // Try to get user's location automatically
-    if ("geolocation" in navigator) {
+  const detectGpsLocation = () => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      setGpsLoading(true);
+      setLocationError('');
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
+          setIsGps(true);
+          setGpsLoading(false);
         },
         (error) => {
           console.warn("Geolocation not available or denied:", error.message);
-          setLocationError("Gagal mendapatkan lokasi otomatis. Laporan akan menggunakan lokasi kelurahan secara default.");
-          // Default to center of Depok
-          setLocation({ lat: -6.4025, lng: 106.7942 });
-        }
+          setLocationError("Izin GPS tidak diberikan atau sinyal tidak ditemukan. Anda dapat menentukan atau menggeser pin lokasi di peta.");
+          setIsGps(false);
+          setGpsLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
     } else {
-      setLocation({ lat: -6.4025, lng: 106.7942 });
+      setLocationError("Perangkat tidak mendukung geolokasi GPS. Silakan tentukan lokasi dengan pin pada peta.");
     }
+  };
+
+  useEffect(() => {
+    detectGpsLocation();
   }, []);
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    setLocation({ lat, lng });
+    setIsGps(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -102,6 +131,7 @@ export default function ReportPage() {
     // Update location to the center of the selected Kecamatan
     if (KECAMATAN_COORDS[selectedKecamatan]) {
       setLocation(KECAMATAN_COORDS[selectedKecamatan]);
+      setIsGps(false);
       setLocationError(''); // Clear error if we have a valid fallback location
     }
   };
@@ -328,12 +358,16 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {locationError && (
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 text-sm p-4 rounded-xl flex items-start gap-3">
-                  <MapPin className="h-5 w-5 shrink-0 mt-0.5" />
-                  <p>{locationError}</p>
-                </div>
-              )}
+              {/* Peta Lokasi Interaktif untuk Melihat dan Mengatur Titik Kejadian */}
+              <ReportLocationMap
+                lat={location.lat}
+                lng={location.lng}
+                onLocationChange={handleLocationChange}
+                isGps={isGps}
+                onLocateGps={detectGpsLocation}
+                gpsLoading={gpsLoading}
+                gpsError={locationError}
+              />
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-text">Gejala yang dialami (Bila ada)</label>

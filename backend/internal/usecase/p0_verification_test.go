@@ -772,6 +772,7 @@ func TestP0_06_AppealToPELifecycle(t *testing.T) {
 			Kecamatan: "Pancoran Mas",
 		},
 	}
+	reportRepo.locations[reportID] = puskesmasLocID
 
 	// 1. Citizen appeals the rejection
 	t.Log("Step 1: Citizen appeals rejection")

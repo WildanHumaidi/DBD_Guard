@@ -109,7 +109,7 @@ func TestUpdateExecutionStatus_SingleSourceOfTruth_Success(t *testing.T) {
 	scheduleID := uuid.New()
 	actorID := uuid.New()
 	reportID := uuid.New()
-	teamID := uuid.New()
+	teamID := actorID
 	itemID := uuid.New()
 
 	schedule := &domain.FoggingSchedule{
@@ -176,7 +176,7 @@ func TestUpdateExecutionStatus_StockDeductionFailure_Rollback(t *testing.T) {
 	scheduleID := uuid.New()
 	actorID := uuid.New()
 	reportID := uuid.New()
-	teamID := uuid.New()
+	teamID := actorID
 	itemID := uuid.New()
 
 	schedule := &domain.FoggingSchedule{

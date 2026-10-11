@@ -315,6 +315,10 @@ func (u *inventoryUsecase) ReceiveStockTransfer(ctx context.Context, actorID, tr
 }
 
 func (u *inventoryUsecase) LogFoggingUsage(ctx context.Context, teamID, scheduleID, itemID uuid.UUID, quantity float64, notes string) error {
+	if quantity <= 0 {
+		return errors.New("jumlah logistik yang dilaporkan harus lebih besar dari 0")
+	}
+
 	return u.inventoryRepo.WithTransaction(func(tx *gorm.DB) error {
 		usage := &domain.InventoryUsageLog{
 			ItemID:     itemID,
