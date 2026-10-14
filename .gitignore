@@ -1,0 +1,122 @@
+# ==========================================
+# DBD Guard - Comprehensive Root .gitignore
+# ==========================================
+
+# 1. Environment & Secret Variables (CRITICAL)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+*.env.*
+!*.env.example
+
+# 2. Certificates, Keys, & Private Credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+id_rsa
+id_ed25519
+*serviceAccount*.json
+*firebase-adminsdk*.json
+google-services.json
+GoogleService-Info.plist
+
+# 3. Binaries & Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+backend/main
+backend/tmp/
+backend/bin/
+bin/
+
+# 4. Test Binaries & Coverage
+*.test
+*.out
+coverage/
+*.lcov
+
+# 5. Database Dumps & Storage Uploads
+*.dump
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+backend/storage/backups/*
+!backend/storage/backups/.gitkeep
+backend/storage/photos/*
+!backend/storage/photos/.gitkeep
+storage/backups/*
+storage/photos/*
+storage/uploads/*
+uploads/
+
+# 6. Node.js & Frontend Build Outputs
+node_modules/
+frontend-web/node_modules/
+frontend-web/.next/
+frontend-web/out/
+frontend-web/build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# 7. Flutter / Dart / Mobile App
+mobile-app/.dart_tool/
+mobile-app/.flutter-plugins
+mobile-app/.flutter-plugins-dependencies
+mobile-app/build/
+mobile-app/.packages
+mobile-app/.pub-cache/
+mobile-app/.pub/
+
+# 8. Logs & Debugger Output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# 9. Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# 10. OS & Filesystem Cache
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 11. IDE & Editor Metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# 12. Archives & Compressed Files
+*.rar
+*.zip
+*.tar.gz
+*.7z
