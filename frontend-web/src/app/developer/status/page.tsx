@@ -1,27 +1,45 @@
 "use client";
 
-import { Activity, CheckCircle2, Server, Database, Shield, XCircle } from "lucide-react";
+import { CheckCircle2, Server, Database, Shield, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 
+interface SystemStatusData {
+  database?: string;
+  web_server?: string;
+  memory_mb?: number;
+  uptime?: string;
+  environment?: string;
+  go_version?: string;
+  postgres_version?: string;
+  active_sessions?: number;
+  total_reports?: number;
+  fcm_service?: string;
+}
+
 export default function SystemStatusPage() {
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<SystemStatusData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    let ignore = false;
+    api.get("/developer/status")
+      .then((res) => {
+        if (!ignore && res.data) {
+          setStatus(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Gagal mengambil status", err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
 
-  const fetchStatus = async () => {
-    try {
-      const res = await api.get("/developer/status");
-      setStatus(res.data);
-    } catch (err) {
-      console.error("Gagal mengambil status", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   if (loading) {
     return <div className="text-center py-10 text-text-muted">Memuat status sistem...</div>;

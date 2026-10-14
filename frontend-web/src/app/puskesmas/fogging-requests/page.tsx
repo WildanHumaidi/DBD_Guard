@@ -2,25 +2,59 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, Loader2, MapPin, Calendar, Clock, SprayCan, Check, X, CalendarDays } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, Calendar, Clock, Check, X, CalendarDays } from "lucide-react";
+
+interface TimFogging {
+  user_id: string;
+  name: string;
+  contact?: string;
+}
+
+interface FoggingRequestPeResult {
+  pe_radius?: number;
+  larva_found?: boolean;
+  fever_count?: number;
+  notes?: string;
+  evidence_photo_url?: string;
+  fogging_request?: {
+    request_id: string;
+  };
+}
+
+interface FoggingRequestReport {
+  report_id: string;
+  reference_no: string;
+  category: string;
+  description: string;
+  status: string;
+  created_at: string;
+  location?: {
+    address: string;
+  };
+  reporter?: {
+    name?: string;
+    anonymous_flag?: boolean;
+  };
+  pe_result?: FoggingRequestPeResult;
+}
 
 export default function FoggingRequestsPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<FoggingRequestReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [timFogging, setTimFogging] = useState<any[]>([]);
+  const [timFogging, setTimFogging] = useState<TimFogging[]>([]);
   
   // Modal State for Approval
-  const [selectedApproval, setSelectedApproval] = useState<any>(null);
+  const [selectedApproval, setSelectedApproval] = useState<FoggingRequestReport | null>(null);
   const [approvalData, setApprovalData] = useState({
     decision: "APPROVED",
     reason: ""
   });
 
   // Modal State for Scheduling
-  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<FoggingRequestReport | null>(null);
   const [scheduleData, setScheduleData] = useState({
     team_id: "",
     planned_time: ""
@@ -34,14 +68,14 @@ export default function FoggingRequestsPage() {
         api.get("/puskesmas/tim-fogging")
       ]);
       
-      const allReports = reportsRes.data?.data || [];
-      const pending = allReports.filter((r: any) => 
+      const allReports = (reportsRes.data?.data || []) as FoggingRequestReport[];
+      const pending = allReports.filter((r) => 
         r.status === "WAITING_FOGGING_APPROVAL" || 
         r.status === "FOGGING_APPROVED"
       );
       setReports(pending);
       setTimFogging(timRes.data || []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch data", err);
       setError("Gagal mengambil data. Coba lagi.");
     } finally {
@@ -50,7 +84,37 @@ export default function FoggingRequestsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    Promise.all([
+      api.get("/reports"),
+      api.get("/puskesmas/tim-fogging")
+    ])
+      .then(([reportsRes, timRes]) => {
+        if (!ignore) {
+          const allReports = (reportsRes.data?.data || []) as FoggingRequestReport[];
+          const pending = allReports.filter((r) => 
+            r.status === "WAITING_FOGGING_APPROVAL" || 
+            r.status === "FOGGING_APPROVED"
+          );
+          setReports(pending);
+          setTimFogging(timRes.data || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          console.error("Failed to fetch data", err);
+          setError("Gagal mengambil data. Coba lagi.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleApproveSubmit = async (e: React.FormEvent) => {
@@ -70,8 +134,9 @@ export default function FoggingRequestsPage() {
       setSelectedApproval(null);
       setApprovalData({ decision: "APPROVED", reason: "" });
       fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal menyimpan persetujuan");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal menyimpan persetujuan";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -100,8 +165,9 @@ export default function FoggingRequestsPage() {
       setSelectedSchedule(null);
       setScheduleData({ team_id: "", planned_time: "" });
       fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal membuat jadwal");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal membuat jadwal";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -274,6 +340,7 @@ export default function FoggingRequestsPage() {
                     <div>
                       <p className="text-xs text-text-muted font-semibold mb-1">Foto Bukti:</p>
                       <div className="rounded-lg overflow-hidden border border-border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={selectedApproval.pe_result.evidence_photo_url.startsWith('http') ? selectedApproval.pe_result.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${selectedApproval.pe_result.evidence_photo_url}`} 
                           alt="Bukti Kunjungan Kader" 

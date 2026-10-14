@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken, onMessage, type Messaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,7 +13,7 @@ const firebaseConfig = {
 // Initialize Firebase only if config is provided to avoid crashing in dev without config
 const app = !getApps().length && firebaseConfig.apiKey ? initializeApp(firebaseConfig) : (getApps().length ? getApp() : null);
 
-let messaging: any = null;
+let messaging: Messaging | null = null;
 
 if (typeof window !== "undefined" && app) {
   try {

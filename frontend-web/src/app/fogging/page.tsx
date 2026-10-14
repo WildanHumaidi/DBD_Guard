@@ -14,29 +14,35 @@ export default function FoggingDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await api.get("/reports");
-        const reports = response.data?.data || [];
-        
-        let scheduled = 0;
-        let inProgress = 0;
-        let completed = 0;
+    let ignore = false;
+    api.get("/reports")
+      .then((response) => {
+        if (!ignore) {
+          const reports = (response.data?.data || []) as { status?: string }[];
+          
+          let scheduled = 0;
+          let inProgress = 0;
+          let completed = 0;
 
-        reports.forEach((r: any) => {
-          if (r.status === "FOGGING_SCHEDULED") scheduled++;
-          else if (r.status === "FOGGING_IN_PROGRESS") inProgress++;
-          else if (r.status === "COMPLETED") completed++;
-        });
+          reports.forEach((r) => {
+            if (r.status === "FOGGING_SCHEDULED") scheduled++;
+            else if (r.status === "FOGGING_IN_PROGRESS") inProgress++;
+            else if (r.status === "COMPLETED") completed++;
+          });
 
-        setStats({ scheduled, inProgress, completed });
-      } catch (err) {
+          setStats({ scheduled, inProgress, completed });
+        }
+      })
+      .catch((err) => {
         console.error("Failed to fetch reports for stats", err);
-      } finally {
-        setLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
     };
-    fetchReports();
   }, []);
 
   return (

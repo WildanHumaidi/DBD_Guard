@@ -14,10 +14,6 @@ export default function SettingsPage() {
   const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
   const fetchSettings = async () => {
     try {
       setLoading(true);
@@ -33,6 +29,30 @@ export default function SettingsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    api.get("/developer/settings")
+      .then((res) => {
+        if (!ignore && res.data) {
+          const data = res.data;
+          setHeroTitle(data.HeroTitle || "");
+          setAnnouncementText(data.AnnouncementText || "");
+          setIsCitizenPortalActive(data.IsCitizenPortalActive !== false);
+          setBannerImagePath(data.BannerImagePath || "");
+        }
+      })
+      .catch((err) => {
+        console.error("Gagal mengambil pengaturan", err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +74,9 @@ export default function SettingsPage() {
       });
       alert("Pengaturan berhasil disimpan!");
       fetchSettings();
-    } catch (err: any) {
-      alert("Gagal menyimpan pengaturan: " + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert("Gagal menyimpan pengaturan: " + errorMsg);
     } finally {
       setSaving(false);
     }
@@ -110,6 +131,7 @@ export default function SettingsPage() {
             />
             {previewUrl ? (
               <div className="relative rounded-xl overflow-hidden border border-border group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={previewUrl} alt="Banner Preview" className="w-full h-48 object-cover" />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                   <button 

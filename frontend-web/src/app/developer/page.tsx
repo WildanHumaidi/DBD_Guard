@@ -5,25 +5,40 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 
+interface AuditLogSummary {
+  id?: string;
+  created_at: string;
+  action: string;
+  resource?: string;
+  entity_type?: string;
+  user?: {
+    name?: string;
+    email?: string;
+  };
+}
+
 export default function DeveloperDashboard() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogSummary[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res = await api.get("/developer/audit-logs");
-        if (Array.isArray(res.data)) {
+    let ignore = false;
+    api.get("/developer/audit-logs")
+      .then((res) => {
+        if (!ignore && Array.isArray(res.data)) {
           setLogs(res.data);
         }
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error("Failed to fetch audit logs:", error);
-      } finally {
-        setLoadingLogs(false);
-      }
-    };
+      })
+      .finally(() => {
+        if (!ignore) setLoadingLogs(false);
+      });
 
-    fetchLogs();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (

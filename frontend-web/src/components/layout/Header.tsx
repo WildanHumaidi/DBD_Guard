@@ -10,6 +10,12 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setIsMobileMenuOpen(false);
+  }
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 40);
@@ -20,11 +26,6 @@ export default function Header() {
     
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Close mobile menu whenever route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
 
   const isHomeOrPublik = pathname === '/' || pathname === '/publik';
   const isTransparent = isHomeOrPublik && !isScrolled && !isMobileMenuOpen;

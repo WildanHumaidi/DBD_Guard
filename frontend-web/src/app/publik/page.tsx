@@ -43,7 +43,7 @@ export default function PublikPage() {
         } else {
           setError(data.message || "Gagal mengambil data statistik");
         }
-      } catch (err) {
+      } catch {
         setError("Terjadi kesalahan jaringan");
       } finally {
         setLoading(false);

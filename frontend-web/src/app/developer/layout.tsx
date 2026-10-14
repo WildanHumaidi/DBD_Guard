@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { LayoutDashboard, Users, Settings, LogOut, Code, Activity, ShieldCheck, FileText, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -15,10 +15,12 @@ export default function DeveloperLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
-  useEffect(() => {
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsMobileDrawerOpen(false);
-  }, [pathname]);
+  }
 
   const handleLogout = () => {
     Cookies.remove("auth_token");

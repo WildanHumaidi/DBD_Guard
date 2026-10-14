@@ -3,11 +3,33 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { LayoutDashboard, Stethoscope, LogOut, HeartPulse, Package, AlertTriangle, Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { LayoutDashboard, Stethoscope, LogOut, HeartPulse, Package, Menu, X } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ShieldExclamationIcon } from "@heroicons/react/24/outline";
 import NotificationPermission from "@/components/NotificationPermission";
+
+function getRoleFromCookie(): string | null {
+  if (typeof window === "undefined") return null;
+  const token = Cookies.get("auth_token");
+  if (!token) return null;
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const decoded = JSON.parse(jsonPayload);
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
+const emptySubscribe = () => () => {};
 
 export default function PuskesmasLayout({
   children,
@@ -16,32 +38,14 @@ export default function PuskesmasLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [role, setRole] = useState<string | null>(null);
+  const role = useSyncExternalStore(emptySubscribe, getRoleFromCookie, () => null);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
-  useEffect(() => {
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsMobileDrawerOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const token = Cookies.get("auth_token");
-    if (token) {
-      try {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join("")
-        );
-        const decoded = JSON.parse(jsonPayload);
-        setRole(decoded.role);
-      } catch (e) {
-        console.error("Failed to decode token", e);
-      }
-    }
-  }, []);
+  }
 
   const handleLogout = () => {
     Cookies.remove("auth_token");

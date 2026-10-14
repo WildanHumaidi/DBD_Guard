@@ -2,8 +2,47 @@
 
 import { useState, use, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, XCircle, MapPin, Image as ImageIcon, ClipboardList } from "lucide-react";
+import { ArrowLeft, MapPin, Image as ImageIcon, ClipboardList } from "lucide-react";
 import api from "@/lib/api";
+
+interface ReportLocation {
+  address: string;
+  rt: string;
+  rw: string;
+  kecamatan: string;
+  kelurahan: string;
+}
+
+interface PeResult {
+  radius_meters: number;
+  fever_count: number;
+  larvae_found: boolean;
+  psn_edukasi_done: boolean;
+  status: string;
+  notes?: string;
+  evidence_photo_url?: string;
+  fogging_request?: {
+    request_id: string;
+  };
+}
+
+interface ReportPhoto {
+  storage_key: string;
+}
+
+interface ReportDetail {
+  reference_no: string;
+  created_at: string;
+  status: string;
+  location: ReportLocation;
+  description: string;
+  reporter: {
+    name: string;
+    contact?: string;
+  };
+  pe_result?: PeResult;
+  photos?: ReportPhoto[];
+}
 
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -11,26 +50,48 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   
   const [loading, setLoading] = useState(false);
   const [plannedFoggingTime, setPlannedFoggingTime] = useState("");
-  const [executionStatus, setExecutionStatus] = useState("ON_THE_WAY");
-  const [executionNotes, setExecutionNotes] = useState("");
   
-  const [report, setReport] = useState<any>(null);
+  const [report, setReport] = useState<ReportDetail | null>(null);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchReport = async () => {
     try {
       const response = await api.get(`/reports/${id}`);
-      setReport(response.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Gagal mengambil data laporan");
+      setReport(response.data?.data);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message || "Gagal mengambil data laporan";
+      setError(errorMsg);
     } finally {
       setFetchLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReport();
+    let ignore = false;
+    api.get(`/reports/${id}`)
+      .then((response) => {
+        if (!ignore) {
+          setReport(response.data?.data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            (err as Error)?.message || "Gagal mengambil data laporan";
+          setError(errorMsg);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setFetchLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [id]);
 
   const translateStatus = (status: string) => {
@@ -154,6 +215,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                   <div className="col-span-2 mt-4">
                     <p className="text-sm text-text-muted mb-2">Foto Bukti PE</p>
                     <div className="rounded-xl overflow-hidden border border-border w-64 h-64 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={report.pe_result.evidence_photo_url.startsWith('http') ? report.pe_result.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${report.pe_result.evidence_photo_url}`} 
                         alt="Foto Bukti PE" 
@@ -212,8 +274,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                         });
                         alert("Jadwal Fogging berhasil dibuat. Status menjadi FOGGING_SCHEDULED.");
                         fetchReport();
-                      } catch (err: any) {
-                        alert(err.response?.data?.error || err.message);
+                      } catch (err: unknown) {
+                        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+                        alert(msg);
                       } finally {
                         setLoading(false);
                       }
@@ -251,7 +314,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
             <h3 className="font-bold text-text mb-4 border-b border-border pb-2">Lampiran Foto</h3>
             {report.photos && report.photos.length > 0 ? (
               <div className="space-y-2">
-                {report.photos.map((photo: any, index: number) => (
+                {report.photos.map((photo: ReportPhoto, index: number) => (
                   <div key={index} className="text-sm text-status-verified underline">
                     {photo.storage_key.split('/').pop()}
                   </div>

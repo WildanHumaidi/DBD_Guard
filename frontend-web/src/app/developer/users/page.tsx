@@ -2,11 +2,28 @@
 
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Users, Plus, Building2, User, Search, RefreshCw, Trash2, ShieldCheck, Phone, X, Edit } from "lucide-react";
+import { Plus, Building2, User, Search, RefreshCw, Trash2, ShieldCheck, Phone, X, Edit } from "lucide-react";
+
+interface AccountItem {
+  id?: string;
+  user_id?: string;
+  name: string;
+  email: string;
+  contact?: string;
+  role?: string | { name?: string };
+  active_status?: boolean;
+  location_id?: string;
+  puskesmas_id?: string;
+  puskesmas_name?: string;
+  puskesmas?: {
+    id?: string;
+    name?: string;
+  };
+}
 
 export default function UserManagementPage() {
-  const [dinkesAccounts, setDinkesAccounts] = useState<any[]>([]);
-  const [puskesmasAccounts, setPuskesmasAccounts] = useState<any[]>([]);
+  const [dinkesAccounts, setDinkesAccounts] = useState<AccountItem[]>([]);
+  const [puskesmasAccounts, setPuskesmasAccounts] = useState<AccountItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dinkes");
 
@@ -42,10 +59,31 @@ export default function UserManagementPage() {
   };
 
   useEffect(() => {
-    fetchAccounts();
+    let ignore = false;
+    Promise.all([
+      api.get("/developer/dinkes-accounts"),
+      api.get("/admin/puskesmas-accounts")
+    ])
+      .then(([dinkesRes, puskesmasRes]) => {
+        if (!ignore) {
+          setDinkesAccounts(dinkesRes.data || []);
+          setPuskesmasAccounts(puskesmasRes.data || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load accounts", err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleDelete = async (id: string, roleTab: string) => {
+    if (!id) return;
     if (!confirm("Apakah Anda yakin ingin menghapus akun ini?")) return;
     try {
       if (roleTab === "dinkes") {
@@ -55,8 +93,9 @@ export default function UserManagementPage() {
       }
       alert("Akun berhasil dihapus!");
       fetchAccounts();
-    } catch (err: any) {
-      alert("Gagal menghapus akun: " + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal menghapus akun";
+      alert("Gagal menghapus akun: " + errorMsg);
     }
   };
 
@@ -64,7 +103,7 @@ export default function UserManagementPage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: formData.name,
         email: formData.email,
         contact: formData.contact,
@@ -97,8 +136,9 @@ export default function UserManagementPage() {
       }
       setIsModalOpen(false);
       fetchAccounts();
-    } catch (err: any) {
-      alert(`Gagal ${isEditMode ? "memperbarui" : "membuat"} akun: ` + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert(`Gagal ${isEditMode ? "memperbarui" : "membuat"} akun: ` + errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -116,15 +156,16 @@ export default function UserManagementPage() {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (acc: any) => {
+  const openEditModal = (acc: AccountItem) => {
     setIsEditMode(true);
-    setEditUserId(acc.id);
+    setEditUserId(acc.id || acc.user_id || "");
+    const roleName = typeof acc.role === "object" ? acc.role?.name : acc.role;
     setFormData({ 
       name: acc.name || "", 
       email: acc.email || "", 
       contact: acc.contact || "", 
       password: "", // do not fill password
-      role: acc.role?.name || (activeTab === "dinkes" ? "ROLE_DINKES" : "ROLE_PETUGAS_PUSKESMAS"),
+      role: roleName || (activeTab === "dinkes" ? "ROLE_DINKES" : "ROLE_PETUGAS_PUSKESMAS"),
       puskesmasId: acc.location_id || "",
       activeStatus: acc.active_status !== false // default true unless explicitly false
     });
@@ -229,7 +270,7 @@ export default function UserManagementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-status-verified/20 text-status-verified">
-                        {acc.role?.name || (activeTab === "dinkes" ? "ROLE_DINKES" : "PUSKESMAS")}
+                        {(typeof acc.role === "object" ? acc.role?.name : acc.role) || (activeTab === "dinkes" ? "ROLE_DINKES" : "PUSKESMAS")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
@@ -255,7 +296,7 @@ export default function UserManagementPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(acc.id, activeTab)}
+                          onClick={() => handleDelete(acc.id || acc.user_id || "", activeTab)}
                           className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors"
                           title="Hapus Akun"
                         >

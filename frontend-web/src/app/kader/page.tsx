@@ -5,53 +5,58 @@ import api from "@/lib/api";
 import { CheckSquare, AlertTriangle, FileText } from "lucide-react";
 import Link from "next/link";
 
+interface EwsWarningItem {
+  created_at: string;
+  location?: {
+    rw?: string;
+  };
+}
+
 export default function KaderDashboard() {
   const [stats, setStats] = useState({
     pending: 0,
     approved: 0,
     rejected: 0
   });
-  const [ewsWarnings, setEwsWarnings] = useState<any[]>([]);
+  const [ewsWarnings, setEwsWarnings] = useState<EwsWarningItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await api.get("/reports");
-        const reports = response.data?.data || [];
-        
-        let pending = 0;
-        let approved = 0;
-        let rejected = 0;
+    let ignore = false;
+    const kelurahan = "Beji";
+    const rw = "04";
 
-        reports.forEach((r: any) => {
-          if (r.status === "MENUNGGU_PE_KADER") pending++;
-          else if (r.status === "REJECTED_HOAX" || r.status === "REJECTED") rejected++;
-          else approved++; // Everything else that moved past MENUNGGU_PE_KADER is basically verified
-        });
+    Promise.all([
+      api.get("/reports"),
+      api.get(`/ews-warnings?kelurahan=${kelurahan}&rw=${rw}`).catch(() => ({ data: { data: [] } }))
+    ])
+      .then(([repRes, ewsRes]) => {
+        if (!ignore) {
+          const reports = (repRes.data?.data || []) as { status?: string }[];
+          let pending = 0;
+          let approved = 0;
+          let rejected = 0;
 
-        setStats({ pending, approved, rejected });
-      } catch (err) {
-        console.error("Failed to fetch reports for stats", err);
-      } finally {
-        setLoading(false);
-      }
+          reports.forEach((r) => {
+            if (r.status === "MENUNGGU_PE_KADER") pending++;
+            else if (r.status === "REJECTED_HOAX" || r.status === "REJECTED") rejected++;
+            else approved++;
+          });
+
+          setStats({ pending, approved, rejected });
+          setEwsWarnings((ewsRes.data?.data || []) as EwsWarningItem[]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch dashboard data", err);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
     };
-
-    const fetchEwsWarnings = async () => {
-      try {
-        // Logged in demo user: Kader RW 04 Kelurahan Beji
-        const kelurahan = "Beji";
-        const rw = "04";
-        const response = await api.get(`/ews-warnings?kelurahan=${kelurahan}&rw=${rw}`);
-        setEwsWarnings(response.data?.data || []);
-      } catch (err) {
-        console.error("Failed to fetch EWS warnings", err);
-      }
-    };
-
-    fetchReports();
-    fetchEwsWarnings();
   }, []);
 
   return (

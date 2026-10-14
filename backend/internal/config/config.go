@@ -23,6 +23,7 @@ type AppConfig struct {
 	SMTPUser    string
 	SMTPPass    string
 	FirebaseCredentialsPath string
+	CORSAllowedOrigins      string
 }
 
 var Env *AppConfig
@@ -58,6 +59,7 @@ func LoadConfig() {
 		SMTPUser:   getEnv("SMTP_USER", ""),
 		SMTPPass:   getEnv("SMTP_PASS", ""),
 		FirebaseCredentialsPath: getEnv("FIREBASE_CREDENTIALS_PATH", ""),
+		CORSAllowedOrigins:      getEnv("CORS_ALLOWED_ORIGINS", "*"),
 	}
 }
 

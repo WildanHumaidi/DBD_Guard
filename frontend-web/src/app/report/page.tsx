@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Send, UploadCloud, CheckCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, Send, UploadCloud, CheckCircle } from 'lucide-react';
 import api from '@/lib/api';
 
 const ReportLocationMap = dynamic(
@@ -108,7 +108,25 @@ export default function ReportPage() {
   };
 
   useEffect(() => {
-    detectGpsLocation();
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setIsGps(true);
+          setGpsLoading(false);
+        },
+        (error) => {
+          console.warn("Geolocation not available or denied:", error.message);
+          setLocationError("Izin GPS tidak diberikan atau sinyal tidak ditemukan. Anda dapat menentukan atau menggeser pin lokasi di peta.");
+          setIsGps(false);
+          setGpsLoading(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
   }, []);
 
   const handleLocationChange = (lat: number, lng: number) => {
@@ -185,9 +203,10 @@ export default function ReportPage() {
         setReferenceNumber(response.data.data.reference_no);
         setSuccess(true);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to submit report', error);
-      alert(error.response?.data?.error || 'Gagal mengirim laporan. Silakan coba lagi.');
+      const errorMsg = (error as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (error as Error)?.message || 'Gagal mengirim laporan. Silakan coba lagi.';
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }

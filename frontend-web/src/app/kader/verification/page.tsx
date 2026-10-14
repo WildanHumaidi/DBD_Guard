@@ -1,18 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, XCircle, MapPin, User, Calendar, Loader2, Thermometer, Bug, Clock, AlertTriangle, X, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, User, Calendar, Loader2, Clock, AlertTriangle, Trash2, X, Bug, Thermometer } from "lucide-react";
 
 import Cookies from "js-cookie";
 
+interface KaderReportItem {
+  report_id: string;
+  reference_no: string;
+  category: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  investigator_id?: string;
+  is_possible_duplicate?: boolean;
+  location?: {
+    address: string;
+  };
+  reporter?: {
+    name?: string;
+    anonymous_flag?: boolean;
+  };
+}
+
+function getAuthUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  const token = Cookies.get("auth_token");
+  if (!token) return null;
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    const parsed = JSON.parse(jsonPayload);
+    return parsed.user_id || parsed.sub || null;
+  } catch (e) {
+    console.error("Failed to decode token", e);
+    return null;
+  }
+}
+
+const emptySubscribe = () => () => {};
+
 export default function KaderVerificationPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<KaderReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const currentUserId = useSyncExternalStore(emptySubscribe, getAuthUserId, () => null);
   
   // State for PE Form Modal
   const [showPeModal, setShowPeModal] = useState<string | null>(null);
@@ -21,37 +66,15 @@ export default function KaderVerificationPage() {
   const [showReturnModal, setShowReturnModal] = useState<string | null>(null);
   const [returnReason, setReturnReason] = useState("");
 
-  useEffect(() => {
-    const token = Cookies.get("auth_token");
-    if (token) {
-      try {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map(function (c) {
-              return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-            })
-            .join("")
-        );
-        const parsed = JSON.parse(jsonPayload);
-        setCurrentUserId(parsed.user_id || parsed.sub);
-      } catch (e) {
-        console.error("Failed to decode token", e);
-      }
-    }
-  }, []);
-
   const fetchPendingReports = async () => {
     setLoading(true);
     try {
       const response = await api.get("/reports");
-      const allReports = response.data?.data || [];
-      const pending = allReports.filter((r: any) => r.status === "MENUNGGU_PE_KADER");
+      const allReports = (response.data?.data || []) as KaderReportItem[];
+      const pending = allReports.filter((r) => r.status === "MENUNGGU_PE_KADER");
       setReports(pending);
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch reports", err);
       setError("Gagal mengambil data laporan. Coba lagi.");
     } finally {
@@ -60,7 +83,30 @@ export default function KaderVerificationPage() {
   };
 
   useEffect(() => {
-    fetchPendingReports();
+    let ignore = false;
+    api.get("/reports")
+      .then((response) => {
+        if (!ignore) {
+          const allReports = (response.data?.data || []) as KaderReportItem[];
+          const pending = allReports.filter((r) => r.status === "MENUNGGU_PE_KADER");
+          setReports(pending);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          console.error("Failed to fetch reports", err);
+          setError("Gagal mengambil data laporan. Coba lagi.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleRejectHoax = async (id: string) => {
@@ -78,8 +124,9 @@ export default function KaderVerificationPage() {
       });
       setSuccessMsg("Laporan berhasil ditandai sebagai Hoax.");
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal memverifikasi laporan");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal memverifikasi laporan";
+      setError(msg);
     } finally {
       setSubmitting(null);
     }
@@ -100,8 +147,9 @@ export default function KaderVerificationPage() {
       // Reset form
       setPeForm({ pe_radius: 100, larva_found: false, fever_count: 0, psn_edukasi_done: false, notes: "", evidence_photo_url: "" });
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal submit hasil PE");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal submit hasil PE";
+      setError(msg);
     } finally {
       setSubmitting(null);
     }
@@ -122,8 +170,9 @@ export default function KaderVerificationPage() {
         },
       });
       setPeForm({ ...peForm, evidence_photo_url: response.data.data.url });
-    } catch (err: any) {
-      alert("Gagal mengunggah foto: " + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Gagal mengunggah foto";
+      alert("Gagal mengunggah foto: " + msg);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -143,8 +192,9 @@ export default function KaderVerificationPage() {
       setShowReturnModal(null);
       setReturnReason("");
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal mengembalikan tugas laporan");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal mengembalikan tugas laporan";
+      setError(msg);
     } finally {
       setSubmitting(null);
     }
@@ -250,8 +300,9 @@ export default function KaderVerificationPage() {
                         await api.post(`/kader/reports/${report.report_id}/claim`);
                         setSuccessMsg("Berhasil mengambil alih laporan.");
                         fetchPendingReports();
-                      } catch (err: any) {
-                        setError(err.response?.data?.error || "Gagal mengambil alih laporan");
+                      } catch (err: unknown) {
+                        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal mengambil alih laporan";
+                        setError(msg);
                       } finally {
                         setSubmitting(null);
                       }
@@ -401,6 +452,7 @@ export default function KaderVerificationPage() {
                 {peForm.evidence_photo_url && (
                   <div className="mt-3 flex items-start gap-3 p-2 bg-bg border border-border rounded-xl w-fit">
                     <div className="rounded-lg overflow-hidden border border-border w-28 h-28 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={peForm.evidence_photo_url.startsWith('http') ? peForm.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${peForm.evidence_photo_url}`} alt="Preview Bukti" className="object-cover w-full h-full" />
                     </div>
                     <button

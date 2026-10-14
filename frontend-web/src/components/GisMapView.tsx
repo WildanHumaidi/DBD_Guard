@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import type { Feature, GeoJsonObject } from "geojson";
 
 // Fix Leaflet default icon issues in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -18,17 +19,28 @@ L.Icon.Default.mergeOptions({
 const DEPOK_CENTER: [number, number] = [-6.402484, 106.794243];
 const DEFAULT_ZOOM = 12;
 
+interface GisGeoJsonFeatureProperties {
+  status?: string;
+  address?: string;
+  rt?: string;
+  rw?: string;
+  kelurahan?: string;
+  kecamatan?: string;
+}
+
+interface GisGeoJsonData extends GeoJsonObject {
+  features?: Feature[];
+}
+
 interface GisMapViewProps {
-  geoData: any;
+  geoData: GisGeoJsonData | null;
   loading: boolean;
 }
 
-export default function GisMapView({ geoData, loading }: GisMapViewProps) {
-  const [mapReady, setMapReady] = useState(false);
+const emptySubscribe = () => () => {};
 
-  useEffect(() => {
-    setMapReady(true);
-  }, []);
+export default function GisMapView({ geoData, loading }: GisMapViewProps) {
+  const mapReady = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   if (!mapReady || loading) {
     return (
@@ -60,8 +72,9 @@ export default function GisMapView({ geoData, loading }: GisMapViewProps) {
     }
   };
 
-  const pointToLayer = (feature: any, latlng: L.LatLng) => {
-    const status = feature.properties?.status || "UNKNOWN";
+  const pointToLayer = (feature: Feature, latlng: L.LatLng) => {
+    const props = (feature.properties || {}) as GisGeoJsonFeatureProperties;
+    const status = props.status || "UNKNOWN";
     const color = getMarkerColor(status);
     
     return L.circleMarker(latlng, {
@@ -74,9 +87,9 @@ export default function GisMapView({ geoData, loading }: GisMapViewProps) {
     });
   };
 
-  const onEachFeature = (feature: any, layer: L.Layer) => {
+  const onEachFeature = (feature: Feature, layer: L.Layer) => {
     if (feature.properties) {
-      const props = feature.properties;
+      const props = feature.properties as GisGeoJsonFeatureProperties;
       const statusMap: Record<string, string> = {
         PENDING: "Menunggu Verifikasi",
         INVESTIGATING: "Dalam Penyelidikan (PE)",
@@ -87,7 +100,7 @@ export default function GisMapView({ geoData, loading }: GisMapViewProps) {
         REJECTED: "Ditolak/Batal",
       };
       
-      const statusLabel = statusMap[props.status] || props.status || "Unknown";
+      const statusLabel = (props.status ? statusMap[props.status] : null) || props.status || "Unknown";
 
       layer.bindPopup(
         `<div style="font-family: Inter, system-ui, sans-serif; padding: 4px 0;">

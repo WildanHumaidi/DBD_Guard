@@ -6,6 +6,50 @@ import { useSearchParams } from 'next/navigation';
 import { Search, ArrowLeft, Clock, CheckCircle2, ShieldAlert, Truck, Smartphone, Key, Star, AlertCircle, MessageSquare, Gavel, Shield } from 'lucide-react';
 import api from '@/lib/api';
 
+interface TrackReportLocation {
+  address?: string;
+  rt?: string;
+  rw?: string;
+  kelurahan?: string;
+  kecamatan?: string;
+}
+
+interface TrackReporter {
+  name?: string;
+  contact?: string;
+  anonymous_flag?: boolean;
+}
+
+interface TrackReportDetail {
+  report_id?: string;
+  reference_no: string;
+  status: string;
+  category?: string;
+  description?: string;
+  created_at: string;
+  rejection_reason?: string;
+  appeal_count?: number;
+  feedback_rating?: number;
+  feedback_notes?: string;
+  investigator_id?: string;
+  reporter?: TrackReporter;
+  location?: TrackReportLocation;
+  pe_result?: {
+    recommendation?: string;
+    inspection_date?: string;
+    larvae_found?: boolean;
+    fever_count?: number;
+  };
+  photos?: Array<{ photo_id: string; storage_key: string }>;
+}
+
+interface PhoneReportItem {
+  reference_no: string;
+  created_at: string;
+  status: string;
+  kecamatan?: string;
+}
+
 function TrackContent() {
   const searchParams = useSearchParams();
   const initialRef = searchParams.get('ref') || '';
@@ -14,8 +58,8 @@ function TrackContent() {
   const [refNumber, setRefNumber] = useState(initialRef);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<any>(null);
-  const [phoneReports, setPhoneReports] = useState<any[]>([]);
+  const [report, setReport] = useState<TrackReportDetail | null>(null);
+  const [phoneReports, setPhoneReports] = useState<PhoneReportItem[]>([]);
   const [error, setError] = useState('');
 
   // Appeal State
@@ -61,8 +105,9 @@ function TrackContent() {
           setError('Tidak ada laporan yang ditemukan untuk nomor handphone tersebut.');
         }
       }
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
         setError('Data tidak ditemukan.');
       } else {
         setError('Terjadi kesalahan sistem. Silakan coba lagi nanti.');
@@ -86,6 +131,7 @@ function TrackContent() {
 
   // Submit Appeal
   const handleSubmitAppeal = async () => {
+    if (!report || !report.report_id) return;
     if (!appealReason.trim()) {
       setAppealError('Alasan banding wajib diisi.');
       return;
@@ -99,11 +145,12 @@ function TrackContent() {
       setAppealMessage(res.data?.message || 'Banding berhasil diajukan!');
       setShowAppealForm(false);
       // Update local report status to reflect appeal
-      setReport({ ...report, status: 'APPEALED' });
-    } catch (err: any) {
-      setAppealError(
-        err.response?.data?.message || err.response?.data?.error || 'Gagal mengajukan banding. Coba lagi nanti.'
-      );
+      setReport(prev => prev ? { ...prev, status: 'APPEALED' } : null);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
+        (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.error ||
+        'Gagal mengajukan banding. Coba lagi nanti.';
+      setAppealError(errorMsg);
     } finally {
       setAppealLoading(false);
     }
@@ -111,6 +158,7 @@ function TrackContent() {
 
   // Submit Feedback
   const handleSubmitFeedback = async () => {
+    if (!report) return;
     if (feedbackRating < 1 || feedbackRating > 5) {
       setFeedbackError('Silakan pilih rating 1-5 terlebih dahulu.');
       return;
@@ -125,11 +173,12 @@ function TrackContent() {
       setFeedbackMessage(res.data?.message || 'Terima kasih atas penilaian Anda!');
       setShowFeedbackForm(false);
       // Update local report to reflect given feedback
-      setReport({ ...report, feedback_rating: feedbackRating, feedback_notes: feedbackNotes });
-    } catch (err: any) {
-      setFeedbackError(
-        err.response?.data?.message || err.response?.data?.error || 'Gagal mengirim penilaian. Coba lagi nanti.'
-      );
+      setReport(prev => prev ? { ...prev, feedback_rating: feedbackRating, feedback_notes: feedbackNotes } : null);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
+        (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.error ||
+        'Gagal mengirim penilaian. Coba lagi nanti.';
+      setFeedbackError(errorMsg);
     } finally {
       setFeedbackLoading(false);
     }
@@ -139,16 +188,18 @@ function TrackContent() {
   const [cancelError, setCancelError] = useState('');
 
   const handleCancelReport = async () => {
+    if (!report) return;
     if (!confirm('Apakah Anda yakin ingin membatalkan laporan ini?')) return;
     setCancelLoading(true);
     setCancelError('');
     try {
       await api.post(`/reports/${report.reference_no}/cancel`);
-      setReport({ ...report, status: 'CANCELLED_BY_USER' });
-    } catch (err: any) {
-      setCancelError(
-        err.response?.data?.message || err.response?.data?.error || 'Gagal membatalkan laporan.'
-      );
+      setReport(prev => prev ? { ...prev, status: 'CANCELLED_BY_USER' } : null);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.message ||
+        (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data?.error ||
+        'Gagal membatalkan laporan.';
+      setCancelError(errorMsg);
     } finally {
       setCancelLoading(false);
     }
@@ -308,7 +359,7 @@ function TrackContent() {
           <div className="glass-panel p-6 animate-fade-in-up mb-8" style={{ animationDelay: '0.2s' }}>
             <h3 className="font-bold text-text mb-4 border-b border-border/50 pb-3">Riwayat Laporan Anda</h3>
             <div className="space-y-4">
-              {phoneReports.map((r: any) => (
+              {phoneReports.map((r: PhoneReportItem) => (
                 <div key={r.reference_no} className="p-4 rounded-xl border border-border hover:border-primary hover:bg-primary-tint transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <h4 className="font-bold text-text font-mono">{r.reference_no}</h4>
@@ -664,7 +715,7 @@ function TrackContent() {
             )}
 
             {/* Feedback Already Given */}
-            {report && report.feedback_rating > 0 && (
+            {report && report.feedback_rating !== undefined && report.feedback_rating > 0 && (
               <div className="mt-8 pt-6 border-t border-border">
                 <div className="bg-bg rounded-2xl p-6 border border-border">
                   <h4 className="font-bold text-text mb-3 flex items-center gap-2">
@@ -676,7 +727,7 @@ function TrackContent() {
                       <Star
                         key={s}
                         className={`h-6 w-6 ${
-                          s <= report.feedback_rating
+                          report.feedback_rating !== undefined && s <= report.feedback_rating
                             ? 'text-amber-400 fill-amber-400'
                             : 'text-border'
                         }`}

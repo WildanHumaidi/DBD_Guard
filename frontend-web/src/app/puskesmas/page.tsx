@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Stethoscope, Clock, CheckCircle2, MapPin } from "lucide-react";
+import { Stethoscope, Clock, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function PuskesmasDashboard() {
@@ -14,28 +14,33 @@ export default function PuskesmasDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await api.get("/reports");
-        const reports = response.data?.data || [];
-        
-        let pendingPE = 0;
-        let completedPE = 0;
-        const totalAssigned = 0;
+    let ignore = false;
+    api.get("/reports")
+      .then((response) => {
+        if (!ignore) {
+          const reports = (response.data?.data || []) as { status?: string }[];
+          
+          let pendingPE = 0;
+          let completedPE = 0;
 
-        reports.forEach((r: any) => {
-          if (r.status === "MENUNGGU_VALIDASI_PUSKESMAS" || r.status === "PE_SCHEDULED") pendingPE++;
-          else if (r.status === "WAITING_FOGGING_APPROVAL" || r.status === "FOGGING_SCHEDULED" || r.status === "FOGGING_IN_PROGRESS" || r.status === "COMPLETED" || r.status === "CLOSED_NO_FOGGING") completedPE++;
-        });
+          reports.forEach((r) => {
+            if (r.status === "MENUNGGU_VALIDASI_PUSKESMAS" || r.status === "PE_SCHEDULED") pendingPE++;
+            else if (r.status === "WAITING_FOGGING_APPROVAL" || r.status === "FOGGING_SCHEDULED" || r.status === "FOGGING_IN_PROGRESS" || r.status === "COMPLETED" || r.status === "CLOSED_NO_FOGGING") completedPE++;
+          });
 
-        setStats({ pendingPE, completedPE, totalAssigned: pendingPE + completedPE });
-      } catch (err) {
+          setStats({ pendingPE, completedPE, totalAssigned: pendingPE + completedPE });
+        }
+      })
+      .catch((err) => {
         console.error("Failed to fetch reports for stats", err);
-      } finally {
-        setLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
     };
-    fetchReports();
   }, []);
 
   return (

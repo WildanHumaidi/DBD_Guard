@@ -34,8 +34,12 @@ func main() {
 	})
 
 	// Middlewares
+	allowOrigins := config.Env.CORSAllowedOrigins
+	if allowOrigins == "" {
+		allowOrigins = "*"
+	}
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: allowOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
 	}))

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Package, Edit, Trash2, Loader2, AlertCircle, RefreshCw, ArrowRightLeft, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Package, Edit, Loader2, AlertCircle, RefreshCw, ArrowRightLeft, CheckCircle2, XCircle } from "lucide-react";
 import api from "@/lib/api";
 import EmptyState from "@/components/common/EmptyState";
 import SkeletonTable from "@/components/common/SkeletonTable";
@@ -69,15 +69,43 @@ export default function InventoryPage() {
       ]);
       setItems(itemsRes.data?.data || []);
       setRequests(reqRes.data?.data || []);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Gagal mengambil data");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message || "Gagal mengambil data";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    Promise.all([
+      api.get("/inventory"),
+      api.get("/inventory/requests")
+    ])
+      .then(([itemsRes, reqRes]) => {
+        if (!ignore) {
+          setItems(itemsRes.data?.data || []);
+          setRequests(reqRes.data?.data || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            (err as Error)?.message || "Gagal mengambil data";
+          setError(errorMsg);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const openAddModal = () => {
@@ -131,8 +159,9 @@ export default function InventoryPage() {
       }
       setIsModalOpen(false);
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -144,8 +173,9 @@ export default function InventoryPage() {
       await api.post(`/inventory/requests/${id}/approve`, { status });
       alert(`Permintaan berhasil di${status === 'APPROVED' ? 'setujui' : 'tolak'}`);
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert(msg);
     }
   };
 
@@ -164,8 +194,9 @@ export default function InventoryPage() {
       setTransferData({ item_id: "", from_warehouse: "", to_warehouse: "", quantity: 0, notes: "" });
       setActiveTab("STOK");
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Loader2, AlertCircle, Building2, UserCircle, Phone } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Building2, UserCircle, Phone } from "lucide-react";
 import api from "@/lib/api";
 import EmptyState from "@/components/common/EmptyState";
 import SkeletonTable from "@/components/common/SkeletonTable";
@@ -42,15 +42,35 @@ export default function PuskesmasManagementPage() {
       const res = await api.get("/admin/puskesmas-accounts");
       // ensure we get an array
       setAccounts(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Gagal mengambil data");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal mengambil data";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    api.get("/admin/puskesmas-accounts")
+      .then((res) => {
+        if (!ignore) {
+          setAccounts(Array.isArray(res.data) ? res.data : []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal mengambil data";
+          setError(errorMsg);
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const openAddModal = () => {
@@ -103,8 +123,9 @@ export default function PuskesmasManagementPage() {
       }
       setIsModalOpen(false);
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan";
+      alert(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -116,8 +137,9 @@ export default function PuskesmasManagementPage() {
       await api.delete(`/admin/puskesmas-accounts/${id}`);
       alert("Akun berhasil dihapus");
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal menghapus akun";
+      alert(errorMsg);
     }
   };
 

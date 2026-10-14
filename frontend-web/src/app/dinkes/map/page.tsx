@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { MapPin, AlertTriangle, RefreshCw, Layers } from "lucide-react";
 import api from "@/lib/api";
+import type { GeoJsonObject } from "geojson";
 
 // Dynamic import to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import("@/components/GisMapView"), {
@@ -28,7 +29,7 @@ interface RiskArea {
 }
 
 export default function AdminMapPage() {
-  const [geoData, setGeoData] = useState<any>(null);
+  const [geoData, setGeoData] = useState<GeoJsonObject | null>(null);
   const [riskAreas, setRiskAreas] = useState<RiskArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,7 +57,33 @@ export default function AdminMapPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    Promise.all([
+      api.get("/admin/gis/heatmap"),
+      api.get("/admin/gis/risk-score"),
+    ])
+      .then(([heatmapRes, riskRes]) => {
+        if (!ignore) {
+          if (heatmapRes.data?.data) {
+            setGeoData(heatmapRes.data.data);
+          }
+          if (riskRes.data?.data) {
+            setRiskAreas(riskRes.data.data);
+          }
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setError("Gagal memuat data peta. Pastikan koneksi backend aktif.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const getRiskColor = (level: string) => {

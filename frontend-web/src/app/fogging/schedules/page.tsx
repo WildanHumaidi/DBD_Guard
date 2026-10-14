@@ -2,16 +2,37 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, PlayCircle, Loader2, MapPin, Calendar, Clock, X } from "lucide-react";
+import { CheckCircle2, PlayCircle, Loader2, MapPin, Calendar, X } from "lucide-react";
+
+interface ReportLocation {
+  address: string;
+}
+
+interface FoggingReportItem {
+  report_id: string;
+  reference_no: string;
+  category: string;
+  status: string;
+  created_at: string;
+  location?: ReportLocation;
+}
+
+interface InventoryItem {
+  item_id: string;
+  item_type?: string;
+  item_name?: string;
+  quantity: number;
+  unit: string;
+}
 
 export default function FoggingSchedulesPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<FoggingReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   
-  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [selectedReport, setSelectedReport] = useState<FoggingReportItem | null>(null);
   const [scheduleId, setScheduleId] = useState<string>("");
   const [formData, setFormData] = useState({
     execution_status: "COMPLETED",
@@ -19,18 +40,18 @@ export default function FoggingSchedulesPage() {
     used_items: [] as { item_id: string, quantity: number }[]
   });
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   
   const fetchSchedules = async () => {
     setLoading(true);
     try {
       const response = await api.get("/reports");
-      const allReports = response.data?.data || [];
-      const scheduled = allReports.filter((r: any) => 
+      const allReports = (response.data?.data || []) as FoggingReportItem[];
+      const scheduled = allReports.filter((r) => 
         r.status === "FOGGING_SCHEDULED" || r.status === "FOGGING_IN_PROGRESS"
       );
       setReports(scheduled);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch schedules", err);
       setError("Gagal mengambil data jadwal fogging.");
     } finally {
@@ -38,21 +59,40 @@ export default function FoggingSchedulesPage() {
     }
   };
 
-  const fetchInventory = async () => {
-    try {
-      const res = await api.get("/inventory");
-      setInventory(res.data?.data || []);
-    } catch (err) {
-      console.error("Failed to fetch inventory", err);
-    }
-  };
-
   useEffect(() => {
-    fetchSchedules();
-    fetchInventory();
+    let ignore = false;
+    Promise.all([
+      api.get("/reports"),
+      api.get("/inventory")
+    ])
+      .then(([reportsRes, invRes]) => {
+        if (!ignore) {
+          const allReports = (reportsRes.data?.data || []) as FoggingReportItem[];
+          const scheduled = allReports.filter((r) =>
+            r.status === "FOGGING_SCHEDULED" || r.status === "FOGGING_IN_PROGRESS"
+          );
+          setReports(scheduled);
+          setInventory(invRes.data?.data || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          console.error("Failed to fetch schedules or inventory", err);
+          setError("Gagal mengambil data jadwal fogging.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const openExecuteModal = async (report: any) => {
+  const openExecuteModal = async (report: FoggingReportItem) => {
     setError("");
     setSuccessMsg("");
     setScheduleId("");
@@ -68,7 +108,7 @@ export default function FoggingSchedulesPage() {
       } else {
         setError("Detail jadwal tidak ditemukan untuk laporan ini.");
       }
-    } catch (err) {
+    } catch {
       setError("Gagal mengambil detail laporan.");
     }
   };
@@ -124,8 +164,9 @@ export default function FoggingSchedulesPage() {
       setFormData({ execution_status: "COMPLETED", notes: "", used_items: [] });
       setEvidenceFile(null);
       fetchSchedules();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal memperbarui eksekusi fogging");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Gagal memperbarui eksekusi fogging";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { Shield, Mail, Lock, Loader2, ArrowRight, ShieldCheck, BugOff, Info } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, BugOff, Info } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
 
@@ -41,8 +41,9 @@ export default function AdminLogin() {
       } else {
         router.push("/"); // Default fallback
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Terjadi kesalahan saat masuk");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Terjadi kesalahan saat masuk";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

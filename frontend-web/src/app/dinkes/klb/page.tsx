@@ -6,9 +6,26 @@ import { ExclamationTriangleIcon, Cog6ToothIcon, CheckCircleIcon } from "@heroic
 import ErrorMessage from "@/components/common/ErrorMessage";
 import EmptyState from "@/components/common/EmptyState";
 
+interface KlbConfig {
+  config_id?: string;
+  region_scope: string;
+  min_cases: number;
+  timeframe_days: number;
+  is_auto_trigger: boolean;
+}
+
+interface KlbAlertItem {
+  alert_id?: string;
+  area_name: string;
+  area_type: string;
+  cases_count: number;
+  triggered_at: string;
+  is_active: boolean;
+}
+
 export default function KlbDashboard() {
-  const [config, setConfig] = useState<any>(null);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [config, setConfig] = useState<KlbConfig | null>(null);
+  const [alerts, setAlerts] = useState<KlbAlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,10 +33,6 @@ export default function KlbDashboard() {
   const [minCases, setMinCases] = useState<number | string>(3);
   const [timeframe, setTimeframe] = useState<number | string>(7);
   const [isAuto, setIsAuto] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     try {
@@ -33,26 +46,57 @@ export default function KlbDashboard() {
       setTimeframe(configData.timeframe_days);
       setIsAuto(configData.is_auto_trigger);
       setAlerts(alertsData || []);
-    } catch (err: any) {
-      setError(err.message || "Gagal memuat data KLB");
+    } catch (err: unknown) {
+      const errMsg = (err as Error)?.message || "Gagal memuat data KLB";
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    let ignore = false;
+    Promise.all([
+      api.get("/admin/klb/config").then(res => res.data?.data || res.data),
+      api.get("/admin/klb/alerts").then(res => res.data?.data || res.data)
+    ])
+      .then(([configData, alertsData]) => {
+        if (!ignore) {
+          setConfig(configData);
+          setMinCases(configData.min_cases);
+          setTimeframe(configData.timeframe_days);
+          setIsAuto(configData.is_auto_trigger);
+          setAlerts(alertsData || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          setError((err as Error)?.message || "Gagal memuat data KLB");
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.patch("/admin/klb/config", {
-          region_scope: config.region_scope || "KELURAHAN",
+          region_scope: config?.region_scope || "KELURAHAN",
           min_cases: Number(minCases),
           timeframe_days: Number(timeframe),
           is_auto_trigger: isAuto
       });
-      alert("Konfigurasi KLB berhasil diperbarui!");
+      alert("Konfigurasi KLB berhasil disimpan!");
       loadData();
-    } catch (err: any) {
-      alert(err.message || "Gagal menyimpan konfigurasi");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal memperbarui konfigurasi";
+      alert("Gagal memperbarui konfigurasi: " + errorMsg);
     }
   };
 

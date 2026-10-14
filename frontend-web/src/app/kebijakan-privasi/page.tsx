@@ -23,7 +23,7 @@ export default function KebijakanPrivasi() {
             <section>
               <h2 className="text-xl font-bold text-text mb-3">1. Pendahuluan</h2>
               <p>
-                Pemerintah Kota Depok (selanjutnya disebut "Kami") berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi pribadi yang Anda berikan melalui platform DBD Guard.
+                Pemerintah Kota Depok (selanjutnya disebut &quot;Kami&quot;) berkomitmen untuk melindungi privasi dan keamanan data pribadi Anda. Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi pribadi yang Anda berikan melalui platform DBD Guard.
               </p>
             </section>
 
@@ -66,7 +66,7 @@ export default function KebijakanPrivasi() {
             <section>
               <h2 className="text-xl font-bold text-text mb-3">6. Hak Pengguna</h2>
               <p>
-                Anda berhak meminta penghapusan kontak pribadi Anda dari database kami setelah kasus atau laporan yang Anda buat dinyatakan selesai (Status: Selesai). Anda juga dapat memilih opsi <strong>"Lapor Secara Anonim"</strong> yang secara otomatis mencegah sistem kami menyimpan kontak pribadi apa pun.
+                Anda berhak meminta penghapusan kontak pribadi Anda dari database kami setelah kasus atau laporan yang Anda buat dinyatakan selesai (Status: Selesai). Anda juga dapat memilih opsi <strong>&quot;Lapor Secara Anonim&quot;</strong> yang secara otomatis mencegah sistem kami menyimpan kontak pribadi apa pun.
               </p>
             </section>
           </div>

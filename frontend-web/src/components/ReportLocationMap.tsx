@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useMemo, useRef, useSyncExternalStore, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -89,6 +89,8 @@ interface ReportLocationMapProps {
   gpsError?: string;
 }
 
+const emptySubscribe = () => () => {};
+
 export default function ReportLocationMap({
   lat,
   lng,
@@ -98,11 +100,7 @@ export default function ReportLocationMap({
   gpsLoading,
   gpsError,
 }: ReportLocationMapProps) {
-  const [mapReady, setMapReady] = useState(false);
-
-  useEffect(() => {
-    setMapReady(true);
-  }, []);
+  const mapReady = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const TILE_URL =
     process.env.NEXT_PUBLIC_MAP_TILE_URL ||

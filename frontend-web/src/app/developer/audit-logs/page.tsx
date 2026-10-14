@@ -1,11 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileText, Clock, RefreshCw } from "lucide-react";
+import { Clock, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
 
+interface AuditLogItem {
+  id?: string;
+  created_at: string;
+  action: string;
+  resource?: string;
+  entity_type?: string;
+  entity_name?: string;
+  user?: {
+    name?: string;
+    email?: string;
+  };
+  details?: Record<string, unknown> | string;
+}
+
 export default function AuditLogsPage() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLogs = async () => {
@@ -23,7 +37,23 @@ export default function AuditLogsPage() {
   };
 
   useEffect(() => {
-    fetchLogs();
+    let ignore = false;
+    api.get("/developer/audit-logs")
+      .then((res) => {
+        if (!ignore && Array.isArray(res.data)) {
+          setLogs(res.data);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch audit logs:", error);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Shield, MapPin, Stethoscope, Droplets, Trash2, Home as HomeIcon, AlertCircle, CheckCircle2, Clock, Building2, Star, Activity, TrendingUp } from 'lucide-react';
+import { ArrowRight, Shield, MapPin, Stethoscope, Droplets, Trash2, Home as HomeIcon, AlertCircle, CheckCircle2, Clock, Star, Activity } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useEffect, useState } from 'react';

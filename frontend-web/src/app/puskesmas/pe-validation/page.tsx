@@ -2,18 +2,61 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { CheckCircle2, Loader2, MapPin, Calendar, Activity, X, PackageX, Clock, HelpCircle, Info } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, Calendar, Activity, X, PackageX, Clock, HelpCircle } from "lucide-react";
+
+interface InventoryItem {
+  item_id: string;
+  item_type: string;
+  quantity: number;
+  unit: string;
+  warehouse: string;
+}
+
+interface PeValidationReport {
+  report_id: string;
+  reference_no: string;
+  category: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  investigator_id?: string;
+  is_possible_duplicate?: boolean;
+  location?: {
+    address: string;
+  };
+  reporter?: {
+    name?: string;
+    anonymous_flag?: boolean;
+  };
+  pe_result?: {
+    pe_id?: string;
+    pe_radius?: number;
+    larva_found?: boolean;
+    fever_count?: number;
+    psn_edukasi_done?: boolean;
+    notes?: string;
+    evidence_photo_url?: string;
+  };
+}
+
+interface ValidationPayload {
+  is_approved: boolean;
+  reason: string;
+  override_decision?: string;
+  override_reason?: string;
+}
 
 export default function PuskesmasPEValidationPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<PeValidationReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   
   // Modal State
-  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [selectedReport, setSelectedReport] = useState<PeValidationReport | null>(null);
   const [formData, setFormData] = useState({
     is_approved: true,
     reason: "",
@@ -37,24 +80,19 @@ export default function PuskesmasPEValidationPage() {
   const fetchPendingReports = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/reports");
-      const allReports = response.data?.data || [];
-      // Reports that are MENUNGGU_VALIDASI_PUSKESMAS need PE validation
-      // Reports that are MENUNGGU_PE_KADER or ESKALASI_PUSKESMAS can be taken over by Puskesmas directly
-      const pending = allReports.filter((r: any) => 
+      const [reportsRes, invRes] = await Promise.all([
+        api.get("/reports"),
+        api.get("/inventory").catch(() => ({ data: { data: [] } }))
+      ]);
+      const allReports = (reportsRes.data?.data || []) as PeValidationReport[];
+      const pending = allReports.filter((r) => 
         r.status === "MENUNGGU_VALIDASI_PUSKESMAS" || 
         r.status === "MENUNGGU_PE_KADER" ||
         r.status === "ESKALASI_PUSKESMAS"
       );
       setReports(pending);
-
-      try {
-        const invRes = await api.get("/inventory");
-        setInventoryItems(invRes.data?.data || []);
-      } catch (e) {
-        console.error("Failed to fetch inventory", e);
-      }
-    } catch (err) {
+      setInventoryItems(invRes.data?.data || []);
+    } catch (err: unknown) {
       console.error("Failed to fetch reports", err);
       setError("Gagal mengambil data laporan. Coba lagi.");
     } finally {
@@ -63,7 +101,38 @@ export default function PuskesmasPEValidationPage() {
   };
 
   useEffect(() => {
-    fetchPendingReports();
+    let ignore = false;
+    Promise.all([
+      api.get("/reports"),
+      api.get("/inventory").catch(() => ({ data: { data: [] } }))
+    ])
+      .then(([reportsRes, invRes]) => {
+        if (!ignore) {
+          const allReports = (reportsRes.data?.data || []) as PeValidationReport[];
+          const pending = allReports.filter((r) => 
+            r.status === "MENUNGGU_VALIDASI_PUSKESMAS" || 
+            r.status === "MENUNGGU_PE_KADER" ||
+            r.status === "ESKALASI_PUSKESMAS"
+          );
+          setReports(pending);
+          setInventoryItems(invRes.data?.data || []);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          console.error("Failed to fetch reports", err);
+          setError("Gagal mengambil data laporan. Coba lagi.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleSubmitValidation = async (e: React.FormEvent) => {
@@ -75,7 +144,7 @@ export default function PuskesmasPEValidationPage() {
     setSuccessMsg("");
     
     try {
-      const payload: any = {
+      const payload: ValidationPayload = {
         is_approved: formData.is_approved,
         reason: formData.reason,
       };
@@ -95,8 +164,9 @@ export default function PuskesmasPEValidationPage() {
       setSelectedReport(null); // Close modal
       setFormData({ is_approved: true, reason: "", is_override: false, override_decision: "FOGGING_FOKUS", override_reason: "" });
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal menyimpan validasi PE");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal menyimpan validasi PE";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -120,8 +190,9 @@ export default function PuskesmasPEValidationPage() {
       setShowPeModal(null);
       setPeForm({ pe_radius: 100, larva_found: false, fever_count: 0, psn_edukasi_done: false, notes: "", evidence_photo_url: "" });
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal submit hasil PE");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal submit hasil PE";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -140,8 +211,9 @@ export default function PuskesmasPEValidationPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setPeForm({ ...peForm, evidence_photo_url: response.data.data.url });
-    } catch (err: any) {
-      alert("Gagal mengunggah foto: " + (err.response?.data?.error || err.message));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Gagal mengunggah foto";
+      alert("Gagal mengunggah foto: " + msg);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -158,8 +230,9 @@ export default function PuskesmasPEValidationPage() {
       await api.post(`/puskesmas/reports/${id}/unassign`);
       setSuccessMsg("Tugas laporan berhasil dicabut secara paksa.");
       fetchPendingReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal mencabut tugas laporan");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Gagal mencabut tugas laporan";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -370,6 +443,7 @@ export default function PuskesmasPEValidationPage() {
                     <div>
                       <p className="text-xs text-text-muted font-semibold mb-1">Foto Bukti:</p>
                       <div className="rounded-lg overflow-hidden border border-border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={selectedReport.pe_result.evidence_photo_url.startsWith('http') 
                             ? selectedReport.pe_result.evidence_photo_url 
@@ -384,7 +458,7 @@ export default function PuskesmasPEValidationPage() {
               )}
 
               {(() => {
-                const insektisida = inventoryItems.find((item: any) => item.item_type === "INSEKTISIDA");
+                const insektisida = inventoryItems.find((item: InventoryItem) => item.item_type === "INSEKTISIDA");
                 if (insektisida && insektisida.quantity < 10) {
                   return (
                     <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-start gap-3">
@@ -435,7 +509,7 @@ export default function PuskesmasPEValidationPage() {
                 {formData.is_approved && (() => {
                   const larvaeFound = Boolean(selectedReport.pe_result?.larva_found);
                   const feverCount = Number(selectedReport.pe_result?.fever_count || 0);
-                  const insektisida = inventoryItems.find((item: any) => item.item_type === "INSEKTISIDA");
+                  const insektisida = inventoryItems.find((item: InventoryItem) => item.item_type === "INSEKTISIDA");
                   const currentStock = insektisida ? Number(insektisida.quantity) : 0;
                   
                   const isHighRisk = larvaeFound || feverCount >= 3;
@@ -733,6 +807,7 @@ export default function PuskesmasPEValidationPage() {
                 </div>
                 {peForm.evidence_photo_url && (
                   <div className="mt-3 relative rounded-xl overflow-hidden border border-border bg-bg h-32">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={peForm.evidence_photo_url.startsWith('http') ? peForm.evidence_photo_url : `${api.defaults.baseURL?.replace('/api/v1', '')}${peForm.evidence_photo_url}`} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}

@@ -25,15 +25,35 @@ export default function SLADashboardPage() {
       if (res.data?.data) {
         setMetrics(res.data.data);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Gagal memuat data metrik SLA.");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal memuat data metrik SLA.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMetrics();
+    let ignore = false;
+    api.get("/admin/analytics/sla")
+      .then((res) => {
+        if (!ignore && res.data?.data) {
+          setMetrics(res.data.data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const errorMsg = (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data?.error || (err as Error)?.message || "Gagal memuat data metrik SLA.";
+          setError(errorMsg);
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (

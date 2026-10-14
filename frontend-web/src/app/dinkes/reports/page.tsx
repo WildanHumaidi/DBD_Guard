@@ -8,14 +8,31 @@ import EmptyState from "@/components/common/EmptyState";
 import SkeletonTable from "@/components/common/SkeletonTable";
 import ErrorMessage from "@/components/common/ErrorMessage";
 
+interface ReportItem {
+  report_id: string;
+  reference_no: string;
+  created_at: string;
+  status: string;
+  category?: string;
+  description?: string;
+  reporter?: {
+    name?: string;
+    contact?: string;
+    anonymous_flag?: boolean;
+  };
+  location?: {
+    rt?: string;
+    rw?: string;
+    kelurahan?: string;
+    kecamatan?: string;
+    address?: string;
+  };
+}
+
 export default function AdminReportsPage() {
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
 
   const fetchReports = async () => {
     try {
@@ -32,6 +49,29 @@ export default function AdminReportsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let ignore = false;
+    api.get('/reports')
+      .then((response) => {
+        if (!ignore && response.data && response.data.data) {
+          setReports(response.data.data);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error("Gagal mengambil data laporan", err);
+          setError("Gagal memuat data laporan dari server.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const translateStatus = (status: string) => {
     switch (status) {

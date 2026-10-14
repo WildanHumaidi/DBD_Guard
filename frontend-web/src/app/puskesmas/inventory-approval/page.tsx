@@ -34,6 +34,15 @@ interface StockTransfer {
   created_at: string;
 }
 
+interface FoggingUsage {
+  id: string;
+  item_id: string;
+  quantity: number;
+  status: string;
+  created_at: string;
+  notes?: string;
+}
+
 export default function PuskesmasInventoryPage() {
   const [activeTab, setActiveTab] = useState<"STOK" | "REQUEST" | "TRANSFER" | "FOGGING">("STOK");
   const [myWarehouse, setMyWarehouse] = useState("Puskesmas Sukmajaya");
@@ -42,7 +51,7 @@ export default function PuskesmasInventoryPage() {
   const [allItems, setAllItems] = useState<InventoryItem[]>([]);
   const [requests, setRequests] = useState<StockRequest[]>([]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
-  const [foggingUsages, setFoggingUsages] = useState<any[]>([]);
+  const [foggingUsages, setFoggingUsages] = useState<FoggingUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -63,20 +72,16 @@ export default function PuskesmasInventoryPage() {
         api.get("/inventory/transfers")
       ]);
       
-      const allInventory = itemsRes.data?.data || [];
+      const allInventory = (itemsRes.data?.data || []) as InventoryItem[];
       setAllItems(allInventory);
+      setItems(allInventory.filter((i) => i.warehouse === myWarehouse));
       
-      // Filter for this warehouse
-      setItems(allInventory.filter((i: InventoryItem) => i.warehouse === myWarehouse));
-      
-      // We can also filter requests locally if the backend doesn't filter perfectly yet
-      const allReqs = reqRes.data?.data || [];
-      setRequests(allReqs.filter((r: StockRequest) => r.warehouse === myWarehouse));
+      const allReqs = (reqRes.data?.data || []) as StockRequest[];
+      setRequests(allReqs.filter((r) => r.warehouse === myWarehouse));
 
-      const allTransfers = transferRes.data?.data || [];
-      setTransfers(allTransfers.filter((t: StockTransfer) => t.to_warehouse === myWarehouse));
+      const allTransfers = (transferRes.data?.data || []) as StockTransfer[];
+      setTransfers(allTransfers.filter((t) => t.to_warehouse === myWarehouse));
 
-      // Fetch fogging usage history for Puskesmas audit
       try {
         const usageRes = await api.get('/inventory/usage/history').catch(() => api.get('/inventory/usage/pending'));
         setFoggingUsages(usageRes.data?.data || []);
@@ -84,15 +89,60 @@ export default function PuskesmasInventoryPage() {
         console.warn("Could not fetch fogging usage history.", e);
       }
       
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Gagal mengambil data");
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message || "Gagal mengambil data";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    let ignore = false;
+    Promise.all([
+      api.get("/inventory"),
+      api.get(`/inventory/requests?warehouse=${encodeURIComponent(myWarehouse)}`),
+      api.get("/inventory/transfers")
+    ])
+      .then(async ([itemsRes, reqRes, transferRes]) => {
+        if (!ignore) {
+          const allInventory = (itemsRes.data?.data || []) as InventoryItem[];
+          setAllItems(allInventory);
+          setItems(allInventory.filter((i) => i.warehouse === myWarehouse));
+          
+          const allReqs = (reqRes.data?.data || []) as StockRequest[];
+          setRequests(allReqs.filter((r) => r.warehouse === myWarehouse));
+
+          const allTransfers = (transferRes.data?.data || []) as StockTransfer[];
+          setTransfers(allTransfers.filter((t) => t.to_warehouse === myWarehouse));
+        }
+
+        try {
+          const usageRes = await api.get('/inventory/usage/history').catch(() => api.get('/inventory/usage/pending'));
+          if (!ignore) {
+            setFoggingUsages(usageRes.data?.data || []);
+          }
+        } catch (e) {
+          console.warn("Could not fetch fogging usage history.", e);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const errorMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+            (err as Error)?.message || "Gagal mengambil data";
+          setError(errorMsg);
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [myWarehouse]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
@@ -109,8 +159,9 @@ export default function PuskesmasInventoryPage() {
       setRequestData({ item_id: "", quantity: 0, notes: "" });
       setActiveTab("STOK");
       fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Gagal mengajukan permintaan";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -409,8 +460,9 @@ export default function PuskesmasInventoryPage() {
                                   });
                                   alert("Stok berhasil diterima!");
                                   fetchData();
-                                } catch (err: any) {
-                                  alert(err.response?.data?.error || "Gagal menerima stok");
+                                } catch (err: unknown) {
+                                  const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error)?.message || "Gagal menerima stok";
+                                  alert(msg);
                                 }
                               }}
                               className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700"

@@ -1,18 +1,16 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Sun, Moon } from "lucide-react";
 import { usePathname } from "next/navigation";
 
+const emptySubscribe = () => () => {};
+
 export function FloatingThemeToggle() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Hide on dashboard routes since they might have their own header toggles
   const isDashboardRoute = pathname?.match(/^\/(puskesmas|kader|fogging|dinkes|developer)/);
